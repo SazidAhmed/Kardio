@@ -1,119 +1,128 @@
 <template>
   <div class="timer-view">
-    <!-- Workout Selection -->
+    <!-- Workout Plan Selection -->
     <section class="section">
-      <label class="section-label">CHOOSE WORKOUT</label>
+      <div class="section-header">
+        <label class="section-label">SELECT PLAN</label>
+        <button class="btn-manage" @click="emit('switch-tab', 'plans')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Manage
+        </button>
+      </div>
       <div class="preset-scroll">
         <div class="preset-list">
           <button
-            v-for="preset in store.presets"
-            :key="preset.id"
+            v-for="plan in store.plans"
+            :key="plan.id"
             class="preset-card"
-            :class="{ active: store.selectedPresetId === preset.id, favorite: store.isFavorite(preset.id) }"
-            @click="store.selectPreset(preset.id)"
+            :class="{ active: store.selectedPlanId === plan.id, favorite: store.isFavorite(plan.id) }"
+            @click="store.selectPlan(plan.id)"
           >
             <div class="preset-header">
-              <span class="preset-icon">{{ preset.icon }}</span>
+              <span class="preset-icon">{{ plan.icon }}</span>
               <button
                 class="btn-star"
-                :class="{ starred: store.isFavorite(preset.id) }"
-                @click.stop="store.toggleFavorite(preset.id)"
-                :title="store.isFavorite(preset.id) ? 'Remove from favorites' : 'Add to favorites'"
+                :class="{ starred: store.isFavorite(plan.id) }"
+                @click.stop="store.toggleFavorite(plan.id)"
+                :title="store.isFavorite(plan.id) ? 'Remove from favorites' : 'Add to favorites'"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
               </button>
             </div>
-            <span class="preset-name">{{ preset.name }}</span>
-            <span class="preset-meta">{{ preset.run }}s/{{ preset.walk }}s · {{ preset.rounds }}r</span>
+            <span class="preset-name">{{ plan.name }}</span>
+            <span class="preset-meta">{{ plan.exercises.length }} exercises · {{ plan.rounds }} rounds</span>
           </button>
         </div>
       </div>
     </section>
 
-    <!-- Timer Config (shown for all but hides stepper for non-custom if desired) -->
-    <section class="section config-grid">
-      <div
-        class="config-card"
-        :class="{ active: store.previewPhase === 'warmup' && store.timerState === 'idle' }"
-        @click="store.setPreviewPhase('warmup')"
-      >
-        <label class="config-label">WARMUP</label>
-        <div class="stepper">
-          <button class="step-btn" @click="store.updateConfig('warmup', -1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
-          <span class="step-value">{{ store.config.warmup }}s</span>
-          <button class="step-btn" @click="store.updateConfig('warmup', 1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
+    <!-- Exercise Cards - Dynamic from selected plan -->
+    <section class="section">
+      <label class="section-label">EXERCISES</label>
+      <div class="exercises-grid">
+        <!-- Warmup Card -->
+        <div
+          v-if="selectedPlan?.warmupDuration > 0"
+          class="config-card"
+          :class="{ active: isPhaseActive('warmup') }"
+        >
+          <label class="config-label">WARMUP</label>
+          <div class="stepper">
+            <button class="step-btn" @click="store.updateConfig('warmup', -1)" :disabled="store.timerState === 'running'">
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+            <span class="step-value">{{ selectedPlan?.warmupDuration }}s</span>
+            <button class="step-btn" @click="store.updateConfig('warmup', 1)" :disabled="store.timerState === 'running'">
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div
-        class="config-card"
-        :class="{ active: store.previewPhase === 'run' && store.timerState === 'idle' }"
-        @click="store.setPreviewPhase('run')"
-      >
-        <label class="config-label">RUN</label>
-        <div class="stepper">
-          <button class="step-btn" @click="store.updateConfig('run', -1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
-          <span class="step-value">{{ store.config.run }}s</span>
-          <button class="step-btn" @click="store.updateConfig('run', 1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
+        <!-- Dynamic Exercise Cards -->
+        <div
+          v-for="(exercise, index) in selectedPlan?.exercises"
+          :key="exercise.id"
+          class="config-card exercise-card"
+          :class="{ active: isExerciseActive(index) }"
+          :style="{ '--exercise-color': getExerciseColor(exercise.name) }"
+        >
+          <label class="config-label">{{ exercise.name.toUpperCase() }}</label>
+          <div class="stepper">
+            <button
+              class="step-btn"
+              @click="updateExerciseDuration(index, -5)"
+              :disabled="store.timerState === 'running'"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+            <span class="step-value" :style="{ color: getExerciseColor(exercise.name) }">{{ exercise.duration }}s</span>
+            <button
+              class="step-btn"
+              @click="updateExerciseDuration(index, 5)"
+              :disabled="store.timerState === 'running'"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div
-        class="config-card"
-        :class="{ active: store.previewPhase === 'walk' && store.timerState === 'idle' }"
-        @click="store.setPreviewPhase('walk')"
-      >
-        <label class="config-label">WALK</label>
-        <div class="stepper">
-          <button class="step-btn" @click="store.updateConfig('walk', -1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
-          <span class="step-value">{{ store.config.walk }}s</span>
-          <button class="step-btn" @click="store.updateConfig('walk', 1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
+        <!-- Rest Card -->
+        <div
+          v-if="selectedPlan?.restBetweenRounds > 0"
+          class="config-card"
+          :class="{ active: isPhaseActive('rest') }"
+        >
+          <label class="config-label">REST <small>(between rounds)</small></label>
+          <div class="stepper">
+            <button class="step-btn" @click="store.updateConfig('rest', -1)" :disabled="store.timerState === 'running'">
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+            <span class="step-value">{{ selectedPlan?.restBetweenRounds }}s</span>
+            <button class="step-btn" @click="store.updateConfig('rest', 1)" :disabled="store.timerState === 'running'">
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div
-        class="config-card"
-        :class="{ active: store.previewPhase === 'cooldown' && store.timerState === 'idle' }"
-        @click="store.setPreviewPhase('cooldown')"
-      >
-        <label class="config-label">COOLDOWN</label>
-        <div class="stepper">
-          <button class="step-btn" @click="store.updateConfig('cooldown', -1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
-          <span class="step-value">{{ store.config.cooldown }}s</span>
-          <button class="step-btn" @click="store.updateConfig('cooldown', 1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <div
-        class="config-card"
-        :class="{ active: store.previewPhase === 'rest' && store.timerState === 'idle' }"
-        @click="store.setPreviewPhase('rest')"
-      >
-        <label class="config-label">REST <small>(optional)</small></label>
-        <div class="stepper">
-          <button class="step-btn" @click="store.updateConfig('rest', -1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
-          <span class="step-value">{{ store.config.rest }}s</span>
-          <button class="step-btn" @click="store.updateConfig('rest', 1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
+        <!-- Cooldown Card -->
+        <div
+          v-if="selectedPlan?.cooldownDuration > 0"
+          class="config-card"
+          :class="{ active: isPhaseActive('cooldown') }"
+        >
+          <label class="config-label">COOLDOWN</label>
+          <div class="stepper">
+            <button class="step-btn" @click="store.updateConfig('cooldown', -1)" :disabled="store.timerState === 'running'">
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+            <span class="step-value">{{ selectedPlan?.cooldownDuration }}s</span>
+            <button class="step-btn" @click="store.updateConfig('cooldown', 1)" :disabled="store.timerState === 'running'">
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -143,7 +152,7 @@
           <button class="step-btn" @click="store.updateConfig('rounds', -1)" :disabled="store.timerState === 'running'">
             <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
           </button>
-          <span class="step-value rounds-value">{{ store.config.rounds }}</span>
+          <span class="step-value rounds-value">{{ selectedPlan?.rounds }}</span>
           <button class="step-btn" @click="store.updateConfig('rounds', 1)" :disabled="store.timerState === 'running'">
             <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
           </button>
@@ -156,7 +165,7 @@
       <div class="summary-card">
         <div class="summary-top">
           <span class="summary-time">{{ formatTotalTime }}</span>
-          <span class="summary-name">{{ store.config.rounds }} rounds · {{ store.selectedPreset.name }}</span>
+          <span class="summary-name">{{ selectedPlan?.rounds }} rounds · {{ selectedPlan?.name }}</span>
         </div>
       </div>
     </section>
@@ -191,13 +200,21 @@
       </div>
 
       <div v-if="store.timerState !== 'idle'" class="phase-indicator">
-        <span class="phase-current" :style="{ color: phaseColor }">{{ store.currentPhase.toUpperCase() }}</span>
-        <span class="phase-round">— Round {{ store.currentRound }}/{{ store.config.rounds }}</span>
+        <span class="phase-current" :style="{ color: phaseColor }">
+          {{ displayPhaseName }}
+        </span>
+        <span class="phase-round">— Round {{ store.currentRound }}/{{ selectedPlan?.rounds }}</span>
       </div>
 
       <p v-if="store.timerState === 'idle' || store.timerState === 'paused'" class="up-next">
-        Up next: <strong :style="{ color: 'var(--color-run)' }">RUN</strong>
-        <span class="up-next-time">({{ formatSeconds(store.config.run) }})</span>
+        <template v-if="selectedPlan?.warmupDuration > 0">
+          Starting with: <strong :style="{ color: phaseColors.warmup }">WARMUP</strong>
+          <span class="up-next-time">({{ formatSeconds(selectedPlan.warmupDuration) }})</span>
+        </template>
+        <template v-else-if="selectedPlan?.exercises.length > 0">
+          Starting with: <strong :style="{ color: getExerciseColor(selectedPlan.exercises[0].name) }">{{ selectedPlan.exercises[0].name.toUpperCase() }}</strong>
+          <span class="up-next-time">({{ formatSeconds(selectedPlan.exercises[0].duration) }})</span>
+        </template>
       </p>
     </section>
 
@@ -247,16 +264,17 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useWorkoutStore } from '~/stores/workout'
-import { useAudioFeedback } from '~/composables/useAudioFeedback'
+import { useWorkoutStore, type WorkoutPlan, type WorkoutExercise } from '~/stores/workout'
 
 const store = useWorkoutStore()
-const audio = useAudioFeedback()
-const isMuted = ref(audio.getMuted())
+const emit = defineEmits<{
+  'switch-tab': [tab: 'timer' | 'history' | 'plans']
+}>()
+
 const workoutNote = ref(store.nextWorkoutNote)
+const isMuted = ref(false) // Simplified - audio feedback handled in store
 
 function toggleMute() {
-  audio.setMuted(!isMuted.value)
   isMuted.value = !isMuted.value
 }
 
@@ -265,16 +283,61 @@ function saveNote() {
   store.setWorkoutNote(workoutNote.value)
 }
 
-const phaseColors: Record<string, string> = {
-  warmup: '#ff9500',
-  run: '#ff3b30',
-  walk: '#34c759',
-  rest: '#af52de', // Purple for rest
-  cooldown: '#5ac8fa',
-  idle: '#5856d6',
+// Get selected plan
+const selectedPlan = computed<WorkoutPlan | null>(() => store.selectedPlan)
+
+// Helper to get exercise color
+function getExerciseColor(name: string): string {
+  return store.exerciseColor(name)
 }
 
-const phaseColor = computed(() => phaseColors[store.currentPhase] || '#5856d6')
+// Check if phase is currently active
+function isPhaseActive(phase: string): boolean {
+  if (store.timerState === 'idle') return false
+  return store.currentPhase === phase
+}
+
+// Check if specific exercise is currently active
+function isExerciseActive(index: number): boolean {
+  if (store.timerState === 'idle') return false
+  return store.currentPhase === 'exercise' && store.currentExerciseIndex === index
+}
+
+// Update exercise duration in the plan
+function updateExerciseDuration(index: number, delta: number) {
+  const plan = selectedPlan.value
+  if (!plan || store.timerState === 'running') return
+
+  const exercise = plan.exercises[index]
+  if (exercise) {
+    exercise.duration = Math.max(5, exercise.duration + delta)
+    store.savePlans()
+  }
+}
+
+const phaseColors: Record<string, string> = {
+  warmup: '#ff9500',
+  exercise: '#ff3b30',
+  rest: '#af52de',
+  cooldown: '#5ac8fa',
+  idle: '#5856d6',
+  finished: '#34c759',
+}
+
+const phaseColor = computed(() => {
+  if (store.currentPhase === 'exercise' && store.currentExercise) {
+    return store.currentExercise.color || getExerciseColor(store.currentExercise.name)
+  }
+  return phaseColors[store.currentPhase] || '#5856d6'
+})
+
+// Display name for current phase
+const displayPhaseName = computed(() => {
+  if (store.currentPhase === 'exercise' && store.currentExercise) {
+    return store.currentExercise.name.toUpperCase()
+  }
+  return store.currentPhase.toUpperCase()
+})
 
 const formatSeconds = (s: number) => {
   const m = Math.floor(s / 60).toString().padStart(2, '0')
@@ -331,13 +394,38 @@ const dashOffset = computed(() => {
   width: 100%;
 }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
 .section-label {
   display: block;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   letter-spacing: 1px;
-  margin-bottom: 10px;
+}
+
+.btn-manage {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--bg-card);
+  color: var(--accent-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-manage:hover {
+  background: var(--accent-glow);
 }
 
 /* Preset Cards */
@@ -386,7 +474,7 @@ const dashOffset = computed(() => {
 .preset-meta { font-size: 9px; color: var(--text-secondary); white-space: nowrap; }
 
 /* Config Grid */
-.config-grid {
+.exercises-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -412,6 +500,15 @@ const dashOffset = computed(() => {
 .config-card.active {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.exercise-card.active {
+  border-color: var(--exercise-color, var(--accent-primary));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--exercise-color, var(--accent-primary)) 20%, transparent);
+}
+
+.exercise-card .step-value {
+  color: var(--exercise-color, var(--accent-primary));
 }
 
 .rounds-card {

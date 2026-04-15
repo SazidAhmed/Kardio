@@ -11,18 +11,29 @@ function getAudioFeedback() {
   return audioFeedback
 }
 
-export interface WorkoutPreset {
+// === NEW: Dynamic Workout Plan Model ===
+export interface WorkoutExercise {
+  id: string
+  name: string
+  duration: number // in seconds
+  color?: string // optional color for the exercise
+}
+
+export interface WorkoutPlan {
   id: string
   name: string
   icon: string
-  warmup: number
-  run: number
-  walk: number
-  cooldown: number
+  description?: string
+  exercises: WorkoutExercise[]
   rounds: number
-  rest: number
+  restBetweenRounds: number // in seconds, 0 = no rest
+  warmupDuration: number // in seconds, 0 = no warmup
+  cooldownDuration: number // in seconds, 0 = no cooldown
+  createdAt: string
+  updatedAt: string
 }
 
+// Legacy interface for backward compatibility with history
 export interface WorkoutSession {
   id: string
   name: string
@@ -34,43 +45,84 @@ export interface WorkoutSession {
   note?: string
 }
 
-export type TimerPhase = 'idle' | 'warmup' | 'run' | 'walk' | 'rest' | 'cooldown'
+export type TimerPhase = 'idle' | 'warmup' | 'exercise' | 'rest' | 'cooldown' | 'finished'
 
 const STORAGE_KEY = 'cardioflow-history'
+const PLANS_STORAGE_KEY = 'cardioflow-plans'
 
 // Store interval outside of Pinia state to avoid SSR serialization issues
 let timerInterval: ReturnType<typeof setInterval> | null = null
 
+// Default plans for new users
+const defaultPlans: WorkoutPlan[] = [
+  {
+    id: 'beginner',
+    name: 'Beginner',
+    icon: '🌱',
+    description: 'Easy start for beginners',
+    exercises: [
+      { id: 'e1', name: 'Run', duration: 20, color: '#ff3b30' },
+      { id: 'e2', name: 'Walk', duration: 40, color: '#34c759' },
+    ],
+    rounds: 8,
+    restBetweenRounds: 0,
+    warmupDuration: 30,
+    cooldownDuration: 30,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'fatburn',
+    name: 'Fat Burn',
+    icon: '🔥',
+    description: 'High intensity fat burning',
+    exercises: [
+      { id: 'e1', name: 'Run', duration: 30, color: '#ff3b30' },
+      { id: 'e2', name: 'Walk', duration: 30, color: '#34c759' },
+    ],
+    rounds: 12,
+    restBetweenRounds: 0,
+    warmupDuration: 30,
+    cooldownDuration: 30,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'hiitbeast',
+    name: 'HIIT Beast',
+    icon: '⚡',
+    description: 'Maximum intensity training',
+    exercises: [
+      { id: 'e1', name: 'Run', duration: 40, color: '#ff3b30' },
+      { id: 'e2', name: 'Walk', duration: 20, color: '#34c759' },
+    ],
+    rounds: 15,
+    restBetweenRounds: 0,
+    warmupDuration: 30,
+    cooldownDuration: 30,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+]
+
 export const useWorkoutStore = defineStore('workout', {
   state: () => ({
-    presets: [
-      { id: 'beginner', name: 'Beginner', icon: '🌱', warmup: 30, run: 20, walk: 40, cooldown: 30, rounds: 8, rest: 0 },
-      { id: 'fatburn', name: 'Fat Burn', icon: '🔥', warmup: 30, run: 30, walk: 30, cooldown: 30, rounds: 12, rest: 0 },
-      { id: 'hiitbeast', name: 'HIIT Beast', icon: '⚡', warmup: 30, run: 40, walk: 20, cooldown: 30, rounds: 15, rest: 0 },
-      { id: 'custom', name: 'Custom', icon: '⚙️', warmup: 30, run: 40, walk: 20, cooldown: 30, rounds: 15, rest: 0 },
-    ] as WorkoutPreset[],
+    // === NEW: Dynamic Workout Plans ===
+    plans: [] as WorkoutPlan[],
+    selectedPlanId: '' as string,
 
-    selectedPresetId: 'beginner' as string,
+    // Editing state for plan creation/editing
+    editingPlan: null as WorkoutPlan | null,
 
-    // Custom config (applies only when custom is selected, but also editable for all)
-    config: {
-      warmup: 30,
-      run: 20,
-      walk: 40,
-      cooldown: 30,
-      rounds: 8,
-      rest: 0, // Optional rest between rounds (0 = disabled)
-    },
-
-    // Favorited presets
+    // Legacy: Keep for migration/compatibility
     favoritePresets: [] as string[],
 
-    // Timer state
+    // Timer state - updated for dynamic model
     timerState: 'idle' as 'idle' | 'running' | 'paused' | 'finished',
-    currentPhase: 'warmup' as TimerPhase,
-    previewPhase: 'warmup' as TimerPhase, // For previewing phase time before starting
+    currentPhase: 'idle' as TimerPhase,
     currentRound: 1,
-    timeRemaining: 30,
+    currentExerciseIndex: 0,
+    timeRemaining: 0,
     totalElapsed: 0,
 
     // History
@@ -94,54 +146,68 @@ export const useWorkoutStore = defineStore('workout', {
   }),
 
   getters: {
-    selectedPreset(state): WorkoutPreset {
-      return state.presets.find(p => p.id === state.selectedPresetId) || state.presets[0]
+    // === NEW: Dynamic Plan Getters ===
+    selectedPlan(state): WorkoutPlan | null {
+      return state.plans.find(p => p.id === state.selectedPlanId) || state.plans[0] || null
     },
 
-    effectiveConfig(state) {
-      return state.config
+    allPlans(state): WorkoutPlan[] {
+      return state.plans
     },
 
+    // Calculate total workout duration for selected plan
     totalWorkoutSeconds(state): number {
-      const c = state.config
-      const restTime = c.rest > 0 ? c.rest * (c.rounds - 1) : 0
-      return c.warmup + (c.run + c.walk) * c.rounds + restTime + c.cooldown
+      const plan = this.selectedPlan
+      if (!plan) return 0
+
+      const exercisesTime = plan.exercises.reduce((sum, ex) => sum + ex.duration, 0)
+      const roundsTime = exercisesTime * plan.rounds
+      const restTime = plan.restBetweenRounds > 0 ? plan.restBetweenRounds * (plan.rounds - 1) : 0
+      return plan.warmupDuration + roundsTime + restTime + plan.cooldownDuration
+    },
+
+    // Get current exercise during workout
+    currentExercise(state): WorkoutExercise | null {
+      const plan = this.selectedPlan
+      if (!plan || state.currentExerciseIndex >= plan.exercises.length) return null
+      return plan.exercises[state.currentExerciseIndex]
+    },
+
+    // Check if user has any custom plans
+    hasCustomPlans(state): boolean {
+      return state.plans.some(p => !['beginner', 'fatburn', 'hiitbeast'].includes(p.id))
     },
 
     isFavorite(state) {
-      return (presetId: string) => state.favoritePresets.includes(presetId)
+      return (planId: string) => state.favoritePresets.includes(planId)
     },
 
-    favoritedPresets(state) {
-      return state.presets.filter(p => state.favoritePresets.includes(p.id))
+    favoritedPlans(state) {
+      return state.plans.filter(p => state.favoritePresets.includes(p.id))
     },
 
+    // Legacy compatibility - map old getters to new model
     nextPhase(state): TimerPhase {
-      if (state.currentPhase === 'warmup') return 'run'
-      if (state.currentPhase === 'run') return 'walk'
-      if (state.currentPhase === 'walk') {
-        // Check if we need rest before next round (except after last round)
-        if (state.currentRound < state.config.rounds && state.config.rest > 0) return 'rest'
-        if (state.currentRound < state.config.rounds) return 'run'
+      const plan = this.selectedPlan
+      if (!plan) return 'idle'
+
+      if (state.currentPhase === 'idle') return 'warmup'
+      if (state.currentPhase === 'warmup') return 'exercise'
+      if (state.currentPhase === 'exercise') {
+        // Check if there are more exercises in this round
+        if (state.currentExerciseIndex < plan.exercises.length - 1) {
+          return 'exercise'
+        }
+        // Last exercise of round - check if rest or next round or cooldown
+        if (state.currentRound < plan.rounds) {
+          if (plan.restBetweenRounds > 0) return 'rest'
+          return 'exercise'
+        }
         return 'cooldown'
       }
-      if (state.currentPhase === 'rest') return 'run'
+      if (state.currentPhase === 'rest') return 'exercise'
+      if (state.currentPhase === 'cooldown') return 'finished'
       return 'idle'
-    },
-
-    nextPhaseDuration(state): number {
-      const next = (() => {
-        if (state.currentPhase === 'warmup') return 'run'
-        if (state.currentPhase === 'run') return 'walk'
-        if (state.currentPhase === 'walk') {
-          if (state.currentRound < state.config.rounds && state.config.rest > 0) return 'rest'
-          if (state.currentRound < state.config.rounds) return 'run'
-          return 'cooldown'
-        }
-        if (state.currentPhase === 'rest') return 'run'
-        return 'cooldown'
-      })()
-      return (state.config as any)[next] || 0
     },
 
     weekHistory(state): WorkoutSession[] {
@@ -149,6 +215,26 @@ export const useWorkoutStore = defineStore('workout', {
       const weekAgo = new Date(now)
       weekAgo.setDate(weekAgo.getDate() - 7)
       return state.history.filter(s => new Date(s.date) >= weekAgo)
+    },
+
+    // Helper to get exercise color
+    exerciseColor(): (exerciseName: string) => string {
+      const colorMap: Record<string, string> = {
+        'Run': '#ff3b30',
+        'Walk': '#34c759',
+        'Jog': '#ff9500',
+        'Sprint': '#ff2d55',
+        'Rest': '#af52de',
+        'Push-ups': '#5856d6',
+        'Squats': '#007aff',
+        'Burpees': '#ff3b30',
+        'Jumping Jacks': '#34c759',
+        'Plank': '#5ac8fa',
+        'Lunges': '#ff9500',
+        'High Knees': '#ff2d55',
+        'Mountain Climbers': '#5856d6',
+      }
+      return (exerciseName: string) => colorMap[exerciseName] || '#5856d6'
     },
 
     streak(state): number {
@@ -222,56 +308,141 @@ export const useWorkoutStore = defineStore('workout', {
   },
 
   actions: {
-    selectPreset(id: string) {
-      this.selectedPresetId = id
-      const preset = this.presets.find(p => p.id === id)
-      if (preset) {
-        this.config = {
-          warmup: preset.warmup,
-          run: preset.run,
-          walk: preset.walk,
-          cooldown: preset.cooldown,
-          rounds: preset.rounds,
-          rest: preset.rest || 0,
-        }
+    // === NEW: Plan Management Actions ===
+
+    // Create a new workout plan
+    createPlan(planData: Omit<WorkoutPlan, 'id' | 'createdAt' | 'updatedAt'>) {
+      const newPlan: WorkoutPlan = {
+        ...planData,
+        id: 'plan_' + Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
+      this.plans.push(newPlan)
+      this.savePlans()
+      return newPlan.id
+    },
+
+    // Update an existing plan
+    updatePlan(id: string, updates: Partial<Omit<WorkoutPlan, 'id' | 'createdAt'>>) {
+      const plan = this.plans.find(p => p.id === id)
+      if (plan) {
+        Object.assign(plan, { ...updates, updatedAt: new Date().toISOString() })
+        this.savePlans()
+      }
+    },
+
+    // Delete a plan
+    deletePlan(id: string) {
+      const idx = this.plans.findIndex(p => p.id === id)
+      if (idx !== -1) {
+        this.plans.splice(idx, 1)
+        // If we deleted the selected plan, select the first available
+        if (this.selectedPlanId === id) {
+          this.selectedPlanId = this.plans[0]?.id || ''
+        }
+        this.savePlans()
+      }
+    },
+
+    // Select a plan for workout
+    selectPlan(id: string) {
+      this.selectedPlanId = id
       this.resetTimer()
     },
 
-    updateConfig(key: keyof typeof this.config, delta: number) {
-      const min = key === 'rounds' ? 1 : 5
-      const step = key === 'rounds' ? 1 : 5
-      this.config[key] = Math.max(min, this.config[key] + delta * step)
+    // Set plan for editing
+    setEditingPlan(plan: WorkoutPlan | null) {
+      this.editingPlan = plan
+    },
 
-      // If custom preset is selected, update it
-      if (this.selectedPresetId === 'custom') {
-        const customPreset = this.presets.find(p => p.id === 'custom')
-        if (customPreset) {
-          Object.assign(customPreset, this.config)
-        }
+    // Save plans to localStorage
+    savePlans() {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(PLANS_STORAGE_KEY, JSON.stringify(this.plans))
       }
+    },
+
+    // Load plans from localStorage
+    loadPlans() {
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem(PLANS_STORAGE_KEY)
+        if (stored) {
+          try {
+            this.plans = JSON.parse(stored)
+          } catch {
+            this.plans = [...defaultPlans]
+          }
+        } else {
+          // First time - use defaults
+          this.plans = [...defaultPlans]
+        }
+        // Select first plan if none selected
+        if (!this.selectedPlanId && this.plans.length > 0) {
+          this.selectedPlanId = this.plans[0].id
+        }
+      } else {
+        this.plans = [...defaultPlans]
+      }
+    },
+
+    // Legacy: Keep for backward compatibility with existing calls
+    selectPreset(id: string) {
+      this.selectPlan(id)
+    },
+
+    // Legacy config update - updates the selected plan instead
+    updateConfig(key: string, delta: number) {
+      const plan = this.selectedPlan
+      if (!plan) return
+
+      const step = key === 'rounds' ? 1 : 5
+
+      switch (key) {
+        case 'rounds':
+          plan.rounds = Math.max(1, plan.rounds + delta * step)
+          break
+        case 'warmup':
+          plan.warmupDuration = Math.max(0, plan.warmupDuration + delta * step)
+          break
+        case 'cooldown':
+          plan.cooldownDuration = Math.max(0, plan.cooldownDuration + delta * step)
+          break
+        case 'rest':
+          plan.restBetweenRounds = Math.max(0, plan.restBetweenRounds + delta * step)
+          break
+      }
+      this.savePlans()
     },
 
     startTimer() {
       const audio = getAudioFeedback()
+      const plan = this.selectedPlan
+      if (!plan) return
+
       if (this.timerState === 'idle') {
-        this.currentPhase = 'warmup'
         this.currentRound = 1
-        this.timeRemaining = this.config.warmup
-        this.previewPhase = 'warmup'
+        this.currentExerciseIndex = 0
         this.totalElapsed = 0
-        // Announce workout start
-        audio?.playPhaseChange('warmup')
+
+        if (plan.warmupDuration > 0) {
+          this.currentPhase = 'warmup'
+          this.timeRemaining = plan.warmupDuration
+          audio?.playPhaseChange('warmup')
+        } else {
+          this.currentPhase = 'exercise'
+          this.timeRemaining = plan.exercises[0]?.duration || 30
+          audio?.playPhaseChange('exercise')
+        }
       }
       this.timerState = 'running'
       timerInterval = setInterval(() => this.tick(), 1000)
     },
 
+    // Legacy: setPreviewPhase replaced with direct timeRemaining updates
     setPreviewPhase(phase: TimerPhase) {
-      if (this.timerState === 'idle' && phase !== 'idle') {
-        this.previewPhase = phase
-        this.timeRemaining = this.config[phase]
-      }
+      // No-op for dynamic model - UI now handles this directly
+      console.log('setPreviewPhase is deprecated in dynamic model')
     },
 
     pauseTimer() {
@@ -283,14 +454,16 @@ export const useWorkoutStore = defineStore('workout', {
     },
 
     resetTimer() {
+      const plan = this.selectedPlan
       this.timerState = 'idle'
       if (timerInterval) {
         clearInterval(timerInterval)
         timerInterval = null
       }
-      this.currentPhase = 'warmup'
+      this.currentPhase = 'idle'
       this.currentRound = 1
-      this.timeRemaining = this.config.warmup
+      this.currentExerciseIndex = 0
+      this.timeRemaining = plan?.warmupDuration || 30
       this.totalElapsed = 0
     },
 
@@ -311,40 +484,70 @@ export const useWorkoutStore = defineStore('workout', {
 
     advancePhase() {
       const audio = getAudioFeedback()
+      const plan = this.selectedPlan
+      if (!plan) return
 
       if (this.currentPhase === 'warmup') {
-        this.currentPhase = 'run'
-        this.timeRemaining = this.config.run
-        audio?.playPhaseChange('run')
-      } else if (this.currentPhase === 'run') {
-        this.currentPhase = 'walk'
-        this.timeRemaining = this.config.walk
-        audio?.playPhaseChange('walk')
-      } else if (this.currentPhase === 'walk') {
-        if (this.currentRound < this.config.rounds) {
-          // Check if rest is enabled before next round
-          if (this.config.rest > 0) {
-            this.currentPhase = 'rest'
-            this.timeRemaining = this.config.rest
-            audio?.speak('Rest')
-            audio?.playPhaseStart()
-          } else {
-            this.currentRound++
-            this.currentPhase = 'run'
-            this.timeRemaining = this.config.run
-            audio?.playPhaseChange('run')
-          }
+        // Warmup done - start first exercise
+        this.currentExerciseIndex = 0
+        this.currentPhase = 'exercise'
+        const exercise = plan.exercises[0]
+        this.timeRemaining = exercise?.duration || 30
+        if (exercise) {
+          audio?.speak(exercise.name)
+          audio?.playPhaseStart()
+        }
+      } else if (this.currentPhase === 'exercise') {
+        // Check if there are more exercises in this round
+        if (this.currentExerciseIndex < plan.exercises.length - 1) {
+          // Next exercise in same round
+          this.currentExerciseIndex++
+          const exercise = plan.exercises[this.currentExerciseIndex]
+          this.timeRemaining = exercise.duration
+          audio?.speak(exercise.name)
+          audio?.playPhaseStart()
         } else {
-          this.currentPhase = 'cooldown'
-          this.timeRemaining = this.config.cooldown
-          audio?.playPhaseChange('cooldown')
+          // Last exercise done - check if more rounds or cooldown
+          if (this.currentRound < plan.rounds) {
+            // More rounds to go
+            if (plan.restBetweenRounds > 0) {
+              this.currentPhase = 'rest'
+              this.timeRemaining = plan.restBetweenRounds
+              audio?.speak('Rest')
+              audio?.playPhaseStart()
+            } else {
+              // No rest - start next round immediately
+              this.currentRound++
+              this.currentExerciseIndex = 0
+              const exercise = plan.exercises[0]
+              this.timeRemaining = exercise?.duration || 30
+              if (exercise) {
+                audio?.speak(`Round ${this.currentRound}, ${exercise.name}`)
+                audio?.playPhaseStart()
+              }
+            }
+          } else {
+            // All rounds done - cooldown
+            if (plan.cooldownDuration > 0) {
+              this.currentPhase = 'cooldown'
+              this.timeRemaining = plan.cooldownDuration
+              audio?.playPhaseChange('cooldown')
+            } else {
+              this.finishWorkout(true)
+            }
+          }
         }
       } else if (this.currentPhase === 'rest') {
-        // After rest, increment round and start running
+        // Rest done - start next round
         this.currentRound++
-        this.currentPhase = 'run'
-        this.timeRemaining = this.config.run
-        audio?.playPhaseChange('run')
+        this.currentExerciseIndex = 0
+        this.currentPhase = 'exercise'
+        const exercise = plan.exercises[0]
+        this.timeRemaining = exercise?.duration || 30
+        if (exercise) {
+          audio?.speak(`Round ${this.currentRound}, ${exercise.name}`)
+          audio?.playPhaseStart()
+        }
       } else if (this.currentPhase === 'cooldown') {
         this.finishWorkout(true)
       }
@@ -352,6 +555,7 @@ export const useWorkoutStore = defineStore('workout', {
 
     finishWorkout(completed: boolean) {
       const audio = getAudioFeedback()
+      const plan = this.selectedPlan
 
       if (timerInterval) {
         clearInterval(timerInterval)
@@ -370,7 +574,7 @@ export const useWorkoutStore = defineStore('workout', {
       const now = new Date()
       const session: WorkoutSession = {
         id: Date.now().toString(),
-        name: this.selectedPreset.name,
+        name: plan?.name || 'Workout',
         date: now.toISOString(),
         time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
         rounds: this.currentRound,

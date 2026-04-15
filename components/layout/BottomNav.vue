@@ -17,6 +17,22 @@
 
       <button
         class="nav-item"
+        :class="{ active: activeTab === 'plans' }"
+        @click="$emit('tab-change', 'plans')"
+      >
+        <div class="nav-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="12" y1="18" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="9" y1="15" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="nav-label">Plans</span>
+      </button>
+
+      <button
+        class="nav-item"
         :class="{ active: activeTab === 'history' }"
         @click="$emit('tab-change', 'history')"
       >
@@ -36,10 +52,10 @@
 
 <script setup lang="ts">
 defineProps<{
-  activeTab: 'timer' | 'history'
+  activeTab: 'timer' | 'history' | 'plans'
 }>()
 defineEmits<{
-  'tab-change': [tab: 'timer' | 'history']
+  'tab-change': [tab: 'timer' | 'history' | 'plans']
 }>()
 </script>
 

@@ -9,8 +9,20 @@
 
       <!-- Page Content -->
       <main class="main-content">
-        <ViewsTimerView v-if="activeTab === 'timer'" key="timer-view" />
-        <ViewsHistoryView v-else-if="activeTab === 'history'" key="history-view" />
+        <ViewsTimerView
+          v-if="activeTab === 'timer'"
+          key="timer-view"
+          @switch-tab="handleTabChange"
+        />
+        <ViewsPlansView
+          v-else-if="activeTab === 'plans'"
+          key="plans-view"
+          @select-plan="handlePlanSelected"
+        />
+        <ViewsHistoryView
+          v-else-if="activeTab === 'history'"
+          key="history-view"
+        />
       </main>
 
       <!-- Bottom Nav -->
@@ -24,15 +36,21 @@ import { ref, onMounted } from 'vue'
 import { useWorkoutStore } from '~/stores/workout'
 
 const store = useWorkoutStore()
-const activeTab = ref<'timer' | 'history'>('timer')
+const activeTab = ref<'timer' | 'history' | 'plans'>('timer')
 
-function handleTabChange(tab: 'timer' | 'history') {
+function handleTabChange(tab: 'timer' | 'history' | 'plans') {
   activeTab.value = tab
+}
+
+function handlePlanSelected() {
+  // Switch to timer tab when a plan is selected
+  activeTab.value = 'timer'
 }
 
 onMounted(() => {
   store.loadHistory()
   store.loadSettings()
+  store.loadPlans() // Load workout plans on app start
 })
 </script>
 
