@@ -55,7 +55,6 @@
                 </svg>
               </button>
               <button
-                v-if="!isDefaultPlan(plan.id)"
                 class="btn-delete"
                 @click.stop="confirmDeletePlan(plan)"
               >
@@ -246,6 +245,13 @@
 
         <div class="modal-footer">
           <button class="btn-secondary" @click="closeEditor">Cancel</button>
+          <button
+            v-if="editingPlan"
+            class="btn-danger-outline"
+            @click="closeEditor(); confirmDeletePlan(editingPlan)"
+          >
+            Delete Plan
+          </button>
           <button class="btn-primary" @click="savePlan">
             {{ editingPlan ? 'Save Changes' : 'Create Plan' }}
           </button>
@@ -1102,6 +1108,23 @@ function deletePlan() {
 
 .btn-danger:hover {
   background: #d32f2f;
+}
+
+.btn-danger-outline {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius-full);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1.5px solid #ff3b30;
+  background: transparent;
+  color: #ff3b30;
+}
+
+.btn-danger-outline:hover {
+  background: #ffebee;
 }
 
 /* Confirm Modal */
