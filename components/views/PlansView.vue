@@ -35,7 +35,7 @@
               <span class="plan-icon">{{ plan.icon }}</span>
               <div class="plan-details">
                 <span class="plan-name">{{ plan.name }}</span>
-                <span class="plan-meta">{{ plan.exercises.length }} exercises · {{ plan.rounds }} rounds</span>
+                <span class="plan-meta">{{ plan.exercises.length }} exercises · {{ totalSetsInPlan(plan) }} sets total</span>
               </div>
             </div>
             <div class="plan-actions">
@@ -91,7 +91,8 @@
             </span>
             <span v-if="plan.warmupDuration > 0" class="plan-tag">Warmup</span>
             <span v-if="plan.cooldownDuration > 0" class="plan-tag">Cooldown</span>
-            <span v-if="plan.restBetweenRounds > 0" class="plan-tag">Rest</span>
+            <span v-if="plan.restBetweenSets > 0" class="plan-tag">Rest Between Sets</span>
+            <span v-if="plan.restBetweenExercises > 0" class="plan-tag">Rest Between Exercises</span>
           </div>
         </div>
       </div>
@@ -144,14 +145,6 @@
             <label class="section-label">SETTINGS</label>
             <div class="settings-grid">
               <div class="setting-item">
-                <label class="setting-label">Rounds</label>
-                <div class="stepper">
-                  <button class="step-btn" @click="updateFormRounds(-1)">−</button>
-                  <span class="step-value">{{ planForm.rounds }}</span>
-                  <button class="step-btn" @click="updateFormRounds(1)">+</button>
-                </div>
-              </div>
-              <div class="setting-item">
                 <label class="setting-label">Warmup (s)</label>
                 <div class="stepper">
                   <button class="step-btn" @click="updateFormValue('warmupDuration', -5)">−</button>
@@ -160,11 +153,19 @@
                 </div>
               </div>
               <div class="setting-item">
-                <label class="setting-label">Rest (s)</label>
+                <label class="setting-label">Rest Between Sets (s)</label>
                 <div class="stepper">
-                  <button class="step-btn" @click="updateFormValue('restBetweenRounds', -5)">−</button>
-                  <span class="step-value">{{ planForm.restBetweenRounds }}</span>
-                  <button class="step-btn" @click="updateFormValue('restBetweenRounds', 5)">+</button>
+                  <button class="step-btn" @click="updateFormValue('restBetweenSets', -5)">−</button>
+                  <span class="step-value">{{ planForm.restBetweenSets }}</span>
+                  <button class="step-btn" @click="updateFormValue('restBetweenSets', 5)">+</button>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label class="setting-label">Rest Between Exercises (s)</label>
+                <div class="stepper">
+                  <button class="step-btn" @click="updateFormValue('restBetweenExercises', -5)">−</button>
+                  <span class="step-value">{{ planForm.restBetweenExercises }}</span>
+                  <button class="step-btn" @click="updateFormValue('restBetweenExercises', 5)">+</button>
                 </div>
               </div>
               <div class="setting-item">
@@ -213,6 +214,17 @@
                       step="5"
                     />
                     <span class="duration-unit">s</span>
+                  </div>
+                  <div class="sets-input-wrapper">
+                    <input
+                      v-model.number="ex.sets"
+                      type="number"
+                      class="exercise-sets-input"
+                      min="1"
+                      max="10"
+                      step="1"
+                    />
+                    <span class="sets-unit">sets</span>
                   </div>
                 </div>
                 <div class="exercise-color" :style="{ backgroundColor: getExerciseColor(ex.name) }"></div>
@@ -294,8 +306,7 @@ const availableIcons = ['🌱', '🔥', '⚡', '💪', '🏃', '🚴', '🏊', '
 
 // Exercise suggestions
 const exerciseSuggestions = [
-  'Run', 'Walk', 'Jog', 'Sprint', 'Rest',
-  'Push-ups', 'Squats', 'Burpees', 'Jumping Jacks',
+  'Run', 'Walk', 'Rest', 'Push-ups', 'Squats', 'Burpees',
   'Plank', 'Lunges', 'High Knees', 'Mountain Climbers',
   'Jump Rope', 'Box Jumps', 'Kettlebell Swings',
   'Bicycle Crunches', 'Leg Raises', 'Russian Twists'
@@ -306,11 +317,11 @@ const defaultForm = {
   name: '',
   icon: '💪',
   description: '',
-  rounds: 8,
   warmupDuration: 30,
   cooldownDuration: 30,
-  restBetweenRounds: 0,
-  exercises: [{ id: '1', name: 'Run', duration: 30, color: '#ff3b30' }] as WorkoutExercise[],
+  restBetweenSets: 30,
+  restBetweenExercises: 60,
+  exercises: [{ id: '1', name: 'New Exercise', duration: 30, sets: 3, color: '#5856d6' }] as WorkoutExercise[],
 }
 
 const planForm = reactive({ ...defaultForm })
@@ -324,7 +335,7 @@ function generateExerciseId() {
 function startCreatePlan() {
   editingPlan.value = null
   Object.assign(planForm, { ...defaultForm })
-  planForm.exercises = [{ id: generateExerciseId(), name: 'Run', duration: 30, color: '#ff3b30' }]
+  planForm.exercises = [{ id: generateExerciseId(), name: 'New Exercise', duration: 30, sets: 3, color: '#5856d6' }]
   showEditor.value = true
 }
 
@@ -334,11 +345,11 @@ function startEditPlan(plan: WorkoutPlan) {
     name: plan.name,
     icon: plan.icon,
     description: plan.description || '',
-    rounds: plan.rounds,
     warmupDuration: plan.warmupDuration,
     cooldownDuration: plan.cooldownDuration,
-    restBetweenRounds: plan.restBetweenRounds,
-    exercises: plan.exercises.map(ex => ({ ...ex })),
+    restBetweenSets: plan.restBetweenSets,
+    restBetweenExercises: plan.restBetweenExercises,
+    exercises: plan.exercises.map((ex: WorkoutExercise) => ({ ...ex })),
   })
   showEditor.value = true
 }
@@ -349,13 +360,12 @@ function closeEditor() {
 }
 
 function addExercise() {
-  const commonExercises = ['Run', 'Walk', 'Rest', 'Push-ups', 'Squats', 'Burpees']
-  const defaultName = commonExercises[planForm.exercises.length % commonExercises.length]
   planForm.exercises.push({
     id: generateExerciseId(),
-    name: defaultName,
+    name: 'New Exercise',
     duration: 30,
-    color: store.exerciseColor(defaultName),
+    sets: 3,
+    color: '#5856d6',
   })
 }
 
@@ -365,9 +375,6 @@ function removeExercise(index: number) {
   }
 }
 
-function updateFormRounds(delta: number) {
-  planForm.rounds = Math.max(1, planForm.rounds + delta)
-}
 
 function updateFormValue(key: keyof typeof planForm, delta: number) {
   const current = planForm[key] as number
@@ -378,18 +385,42 @@ function getExerciseColor(name: string): string {
   return store.exerciseColor(name)
 }
 
+function totalSetsInPlan(plan: WorkoutPlan): number {
+  return plan.exercises.reduce((sum: number, ex: WorkoutExercise) => sum + (ex.sets || 1), 0)
+}
+
 function calculateTotalDuration(plan: WorkoutPlan): number {
-  const exercisesTime = plan.exercises.reduce((sum, ex) => sum + ex.duration, 0)
-  const roundsTime = exercisesTime * plan.rounds
-  const restTime = plan.restBetweenRounds > 0 ? plan.restBetweenRounds * (plan.rounds - 1) : 0
-  return plan.warmupDuration + roundsTime + restTime + plan.cooldownDuration
+  // For each exercise: (duration + rest between sets) * sets - last rest
+  const perExerciseTime = plan.exercises.reduce((sum: number, ex: WorkoutExercise) => {
+    const exerciseTime = ex.duration * (ex.sets || 1)
+    const restBetweenSetsTime = plan.restBetweenSets > 0
+      ? plan.restBetweenSets * ((ex.sets || 1) - 1)
+      : 0
+    return sum + exerciseTime + restBetweenSetsTime
+  }, 0)
+
+  // Rest between exercises
+  const restBetweenExercises = plan.restBetweenExercises > 0 && plan.exercises.length > 1
+    ? plan.restBetweenExercises * (plan.exercises.length - 1)
+    : 0
+
+  return plan.warmupDuration + perExerciseTime + restBetweenExercises + plan.cooldownDuration
 }
 
 function calculateFormTotalDuration(): number {
-  const exercisesTime = planForm.exercises.reduce((sum, ex) => sum + ex.duration, 0)
-  const roundsTime = exercisesTime * planForm.rounds
-  const restTime = planForm.restBetweenRounds > 0 ? planForm.restBetweenRounds * (planForm.rounds - 1) : 0
-  return planForm.warmupDuration + roundsTime + restTime + planForm.cooldownDuration
+  const perExerciseTime = planForm.exercises.reduce((sum: number, ex: WorkoutExercise) => {
+    const exerciseTime = ex.duration * (ex.sets || 1)
+    const restBetweenSetsTime = planForm.restBetweenSets > 0
+      ? planForm.restBetweenSets * ((ex.sets || 1) - 1)
+      : 0
+    return sum + exerciseTime + restBetweenSetsTime
+  }, 0)
+
+  const restBetweenExercises = planForm.restBetweenExercises > 0 && planForm.exercises.length > 1
+    ? planForm.restBetweenExercises * (planForm.exercises.length - 1)
+    : 0
+
+  return planForm.warmupDuration + perExerciseTime + restBetweenExercises + planForm.cooldownDuration
 }
 
 function formatDuration(seconds: number): string {
@@ -414,7 +445,7 @@ function savePlan() {
   }
 
   // Update exercise colors
-  const exercisesWithColors = planForm.exercises.map(ex => ({
+  const exercisesWithColors = planForm.exercises.map((ex: WorkoutExercise) => ({
     ...ex,
     color: getExerciseColor(ex.name),
   }))
@@ -426,10 +457,10 @@ function savePlan() {
       icon: planForm.icon,
       description: planForm.description,
       exercises: exercisesWithColors,
-      rounds: planForm.rounds,
       warmupDuration: planForm.warmupDuration,
       cooldownDuration: planForm.cooldownDuration,
-      restBetweenRounds: planForm.restBetweenRounds,
+      restBetweenSets: planForm.restBetweenSets,
+      restBetweenExercises: planForm.restBetweenExercises,
     })
   } else {
     // Create new
@@ -438,10 +469,10 @@ function savePlan() {
       icon: planForm.icon,
       description: planForm.description,
       exercises: exercisesWithColors,
-      rounds: planForm.rounds,
       warmupDuration: planForm.warmupDuration,
       cooldownDuration: planForm.cooldownDuration,
-      restBetweenRounds: planForm.restBetweenRounds,
+      restBetweenSets: planForm.restBetweenSets,
+      restBetweenExercises: planForm.restBetweenExercises,
     })
   }
 
@@ -990,6 +1021,39 @@ function deletePlan() {
 }
 
 .duration-unit {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+.sets-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 10px;
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.exercise-sets-input {
+  width: 100%;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  text-align: center;
+}
+
+.exercise-sets-input:focus {
+  outline: none;
+}
+
+.sets-unit {
   font-size: 12px;
   color: var(--text-secondary);
   margin-left: 2px;

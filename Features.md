@@ -66,3 +66,50 @@ Filename includes date: cardioflow-workouts-YYYY-MM-DD.csv
 Data Persistence:
 
 All favorites, notes, rest settings persist in localStorage
+
+...
+
+New Workout Flow
+Example: 3 exercises (Plank, Squats, Push-ups) with 3 sets each:
+
+Warmup (30s)
+Plank Set 1 (60s) → Rest (30s) → Plank Set 2 (60s) → Rest (30s) → Plank Set 3 (60s)
+Rest between exercises (60s)
+Squats Set 1 (45s) → Rest (30s) → Squats Set 2 (45s) → Rest (30s) → Squats Set 3 (45s)
+Rest between exercises (60s)
+Push-ups Set 1 (30s) → Rest (30s) → Push-ups Set 2 (30s) → Rest (30s) → Push-ups Set 3 (30s)
+Cooldown (30s)
+What's Changed
+Timer View
+Shows "SETS PER EXERCISE" instead of "ROUNDS"
+Displays "Set X/Y" during workout
+Shows exercise count in summary
+Plans View
+New default exercise: Plank (1 min) with 3 sets
+Two rest settings:
+Rest Between Sets - rest between sets of the same exercise
+Rest Between Exercises - rest when switching to next exercise
+Duration calculation updated for set-based timing
+
+.....
+
+Timer View:
+
+Removed global "Rounds" card
+Each exercise card now shows:
+Duration (with stepper)
+Sets (with stepper)
+Displays "Set X/Y" during workout (Y is from current exercise)
+Shows "Rest Between Sets" card instead of "Rest Between Rounds"
+Plans View:
+
+Removed global "Rounds" setting
+Each exercise in editor has:
+Name input
+Duration (seconds)
+Sets input
+Plan list shows "X sets total" (sum of all exercise sets)
+Duration calculations use per-exercise sets
+Example Flow
+Plank (3 sets): Plank → Rest → Plank → Rest → Plank Rest between exercises Squats (2 sets): Squats → Rest → Squats
+Rest between exercises Push-ups (3 sets): Push-ups → Rest → Push-ups → Rest → Push-ups Cooldown

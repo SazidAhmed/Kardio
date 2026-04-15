@@ -87,20 +87,38 @@
               <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
             </button>
           </div>
+          <!-- Sets control -->
+          <div class="stepper sets-stepper">
+            <button
+              class="step-btn"
+              @click="updateExerciseSets(index, -1)"
+              :disabled="store.timerState === 'running'"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+            <span class="step-value">{{ exercise.sets }} sets</span>
+            <button
+              class="step-btn"
+              @click="updateExerciseSets(index, 1)"
+              :disabled="store.timerState === 'running'"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
         </div>
 
-        <!-- Rest Card -->
+        <!-- Rest Between Sets Card -->
         <div
-          v-if="selectedPlan?.restBetweenRounds > 0"
+          v-if="selectedPlan?.restBetweenSets > 0"
           class="config-card"
           :class="{ active: isPhaseActive('rest') }"
         >
-          <label class="config-label">REST <small>(between rounds)</small></label>
+          <label class="config-label">REST <small>(between sets)</small></label>
           <div class="stepper">
             <button class="step-btn" @click="store.updateConfig('rest', -1)" :disabled="store.timerState === 'running'">
               <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
             </button>
-            <span class="step-value">{{ selectedPlan?.restBetweenRounds }}s</span>
+            <span class="step-value">{{ selectedPlan?.restBetweenSets }}s</span>
             <button class="step-btn" @click="store.updateConfig('rest', 1)" :disabled="store.timerState === 'running'">
               <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
             </button>
@@ -127,45 +145,12 @@
       </div>
     </section>
 
-    <!-- Workout Notes -->
-    <section v-if="store.timerState === 'idle' || store.timerState === 'finished'" class="section">
-      <div class="notes-card">
-        <label class="notes-label">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          {{ store.timerState === 'finished' ? 'How did it go?' : 'Notes for next workout' }}
-        </label>
-        <textarea
-          v-model="workoutNote"
-          @blur="saveNote"
-          class="notes-input"
-          rows="2"
-          placeholder="e.g., Feeling good, ready for more rounds..."
-        ></textarea>
-      </div>
-    </section>
-
-    <!-- Rounds -->
-    <section class="section">
-      <div class="config-card rounds-card">
-        <label class="config-label">ROUNDS</label>
-        <div class="stepper">
-          <button class="step-btn" @click="store.updateConfig('rounds', -1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
-          <span class="step-value rounds-value">{{ selectedPlan?.rounds }}</span>
-          <button class="step-btn" @click="store.updateConfig('rounds', 1)" :disabled="store.timerState === 'running'">
-            <svg width="16" height="16" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
-        </div>
-      </div>
-    </section>
-
     <!-- Workout Summary Card -->
     <section class="section">
       <div class="summary-card">
         <div class="summary-top">
           <span class="summary-time">{{ formatTotalTime }}</span>
-          <span class="summary-name">{{ selectedPlan?.rounds }} rounds · {{ selectedPlan?.name }}</span>
+          <span class="summary-name">{{ selectedPlan?.exercises.length }} exercises · {{ selectedPlan?.name }}</span>
         </div>
       </div>
     </section>
@@ -199,11 +184,11 @@
         </div>
       </div>
 
-      <div v-if="store.timerState !== 'idle'" class="phase-indicator">
+      <div v-if="store.timerState !== 'idle' && store.currentExercise" class="phase-indicator">
         <span class="phase-current" :style="{ color: phaseColor }">
           {{ displayPhaseName }}
         </span>
-        <span class="phase-round">— Round {{ store.currentRound }}/{{ selectedPlan?.rounds }}</span>
+        <span class="phase-round">— Set {{ store.currentSet }}/{{ store.currentExercise.sets }}</span>
       </div>
 
       <p v-if="store.timerState === 'idle' || store.timerState === 'paused'" class="up-next">
@@ -271,16 +256,10 @@ const emit = defineEmits<{
   'switch-tab': [tab: 'timer' | 'history' | 'plans']
 }>()
 
-const workoutNote = ref(store.nextWorkoutNote)
 const isMuted = ref(false) // Simplified - audio feedback handled in store
 
 function toggleMute() {
   isMuted.value = !isMuted.value
-}
-
-// Sync note with store when finished
-function saveNote() {
-  store.setWorkoutNote(workoutNote.value)
 }
 
 // Get selected plan
@@ -305,14 +284,12 @@ function isExerciseActive(index: number): boolean {
 
 // Update exercise duration in the plan
 function updateExerciseDuration(index: number, delta: number) {
-  const plan = selectedPlan.value
-  if (!plan || store.timerState === 'running') return
+  store.updateExerciseConfig(index, 'duration', delta)
+}
 
-  const exercise = plan.exercises[index]
-  if (exercise) {
-    exercise.duration = Math.max(5, exercise.duration + delta)
-    store.savePlans()
-  }
+// Update exercise sets in the plan
+function updateExerciseSets(index: number, delta: number) {
+  store.updateExerciseConfig(index, 'sets', delta)
 }
 
 const phaseColors: Record<string, string> = {
@@ -509,6 +486,17 @@ const dashOffset = computed(() => {
 
 .exercise-card .step-value {
   color: var(--exercise-color, var(--accent-primary));
+}
+
+.exercise-card .sets-stepper {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.exercise-card .sets-stepper .step-value {
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .rounds-card {
@@ -878,43 +866,5 @@ const dashOffset = computed(() => {
 .preset-card.favorite {
   border-color: #ff9500;
   background: #fff8f0;
-}
-
-/* Notes Section */
-.notes-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  box-shadow: var(--shadow-card);
-}
-
-.notes-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.notes-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1.5px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 14px;
-  resize: vertical;
-  min-height: 60px;
-  font-family: inherit;
-}
-
-.notes-input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
 }
 </style>

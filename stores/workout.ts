@@ -16,6 +16,7 @@ export interface WorkoutExercise {
   id: string
   name: string
   duration: number // in seconds
+  sets: number // Number of sets for this exercise
   color?: string // optional color for the exercise
 }
 
@@ -25,8 +26,8 @@ export interface WorkoutPlan {
   icon: string
   description?: string
   exercises: WorkoutExercise[]
-  rounds: number
-  restBetweenRounds: number // in seconds, 0 = no rest
+  restBetweenSets: number // Rest between sets of same exercise (seconds)
+  restBetweenExercises: number // Rest between different exercises (seconds)
   warmupDuration: number // in seconds, 0 = no warmup
   cooldownDuration: number // in seconds, 0 = no cooldown
   createdAt: string
@@ -61,11 +62,11 @@ const defaultPlans: WorkoutPlan[] = [
     icon: '🌱',
     description: 'Easy start for beginners',
     exercises: [
-      { id: 'e1', name: 'Run', duration: 20, color: '#ff3b30' },
-      { id: 'e2', name: 'Walk', duration: 40, color: '#34c759' },
+      { id: 'e1', name: 'Run', duration: 20, sets: 3, color: '#ff3b30' },
+      { id: 'e2', name: 'Walk', duration: 40, sets: 3, color: '#34c759' },
     ],
-    rounds: 8,
-    restBetweenRounds: 0,
+    restBetweenSets: 30,
+    restBetweenExercises: 60,
     warmupDuration: 30,
     cooldownDuration: 30,
     createdAt: new Date().toISOString(),
@@ -77,11 +78,11 @@ const defaultPlans: WorkoutPlan[] = [
     icon: '🔥',
     description: 'High intensity fat burning',
     exercises: [
-      { id: 'e1', name: 'Run', duration: 30, color: '#ff3b30' },
-      { id: 'e2', name: 'Walk', duration: 30, color: '#34c759' },
+      { id: 'e1', name: 'Run', duration: 30, sets: 4, color: '#ff3b30' },
+      { id: 'e2', name: 'Walk', duration: 30, sets: 4, color: '#34c759' },
     ],
-    rounds: 12,
-    restBetweenRounds: 0,
+    restBetweenSets: 30,
+    restBetweenExercises: 60,
     warmupDuration: 30,
     cooldownDuration: 30,
     createdAt: new Date().toISOString(),
@@ -93,11 +94,11 @@ const defaultPlans: WorkoutPlan[] = [
     icon: '⚡',
     description: 'Maximum intensity training',
     exercises: [
-      { id: 'e1', name: 'Run', duration: 40, color: '#ff3b30' },
-      { id: 'e2', name: 'Walk', duration: 20, color: '#34c759' },
+      { id: 'e1', name: 'Run', duration: 40, sets: 5, color: '#ff3b30' },
+      { id: 'e2', name: 'Walk', duration: 20, sets: 5, color: '#34c759' },
     ],
-    rounds: 15,
-    restBetweenRounds: 0,
+    restBetweenSets: 30,
+    restBetweenExercises: 60,
     warmupDuration: 30,
     cooldownDuration: 30,
     createdAt: new Date().toISOString(),
@@ -117,11 +118,11 @@ export const useWorkoutStore = defineStore('workout', {
     // Legacy: Keep for migration/compatibility
     favoritePresets: [] as string[],
 
-    // Timer state - updated for dynamic model
+    // Timer state - updated for set-based model
     timerState: 'idle' as 'idle' | 'running' | 'paused' | 'finished',
     currentPhase: 'idle' as TimerPhase,
-    currentRound: 1,
-    currentExerciseIndex: 0,
+    currentExerciseIndex: 0, // Which exercise we're on
+    currentSet: 1, // Which set of the current exercise (1 to rounds)
     timeRemaining: 0,
     totalElapsed: 0,
 
@@ -155,15 +156,26 @@ export const useWorkoutStore = defineStore('workout', {
       return state.plans
     },
 
-    // Calculate total workout duration for selected plan
+    // Calculate total workout duration for selected plan (per-exercise sets)
     totalWorkoutSeconds(state): number {
       const plan = this.selectedPlan
       if (!plan) return 0
 
-      const exercisesTime = plan.exercises.reduce((sum, ex) => sum + ex.duration, 0)
-      const roundsTime = exercisesTime * plan.rounds
-      const restTime = plan.restBetweenRounds > 0 ? plan.restBetweenRounds * (plan.rounds - 1) : 0
-      return plan.warmupDuration + roundsTime + restTime + plan.cooldownDuration
+      // For each exercise: (exercise duration + rest between sets) * sets - last rest
+      const perExerciseTime = plan.exercises.reduce((total, ex) => {
+        const exerciseTime = ex.duration * ex.sets
+        const restTime = plan.restBetweenSets > 0
+          ? plan.restBetweenSets * (ex.sets - 1)
+          : 0
+        return total + exerciseTime + restTime
+      }, 0)
+
+      // Rest between exercises
+      const restBetweenExercises = plan.restBetweenExercises > 0 && plan.exercises.length > 1
+        ? plan.restBetweenExercises * (plan.exercises.length - 1)
+        : 0
+
+      return plan.warmupDuration + perExerciseTime + restBetweenExercises + plan.cooldownDuration
     },
 
     // Get current exercise during workout
@@ -186,23 +198,24 @@ export const useWorkoutStore = defineStore('workout', {
       return state.plans.filter(p => state.favoritePresets.includes(p.id))
     },
 
-    // Legacy compatibility - map old getters to new model
+    // Per-exercise sets flow: Exercise -> Rest (between sets) -> Exercise -> Rest (between exercises) -> Next Exercise
     nextPhase(state): TimerPhase {
       const plan = this.selectedPlan
       if (!plan) return 'idle'
 
+      const exercise = plan.exercises[state.currentExerciseIndex]
+      const totalSets = exercise?.sets ?? 1
+
       if (state.currentPhase === 'idle') return 'warmup'
       if (state.currentPhase === 'warmup') return 'exercise'
       if (state.currentPhase === 'exercise') {
-        // Check if there are more exercises in this round
-        if (state.currentExerciseIndex < plan.exercises.length - 1) {
+        // Check if we have more sets of this exercise
+        if (state.currentSet < totalSets) {
+          // More sets to go - rest between sets
+          if (plan.restBetweenSets > 0) return 'rest'
           return 'exercise'
         }
-        // Last exercise of round - check if rest or next round or cooldown
-        if (state.currentRound < plan.rounds) {
-          if (plan.restBetweenRounds > 0) return 'rest'
-          return 'exercise'
-        }
+        // All sets of this exercise done
         return 'cooldown'
       }
       if (state.currentPhase === 'rest') return 'exercise'
@@ -392,16 +405,31 @@ export const useWorkoutStore = defineStore('workout', {
     },
 
     // Legacy config update - updates the selected plan instead
+    updateExerciseConfig(exerciseIndex: number, key: string, delta: number) {
+      const plan = this.selectedPlan
+      if (!plan || exerciseIndex >= plan.exercises.length) return
+
+      const step = key === 'sets' ? 1 : 5
+      const exercise = plan.exercises[exerciseIndex]
+
+      switch (key) {
+        case 'sets':
+          exercise.sets = Math.max(1, exercise.sets + delta * step)
+          break
+        case 'duration':
+          exercise.duration = Math.max(5, exercise.duration + delta * step)
+          break
+      }
+      this.savePlans()
+    },
+
     updateConfig(key: string, delta: number) {
       const plan = this.selectedPlan
       if (!plan) return
 
-      const step = key === 'rounds' ? 1 : 5
+      const step = 5
 
       switch (key) {
-        case 'rounds':
-          plan.rounds = Math.max(1, plan.rounds + delta * step)
-          break
         case 'warmup':
           plan.warmupDuration = Math.max(0, plan.warmupDuration + delta * step)
           break
@@ -409,7 +437,7 @@ export const useWorkoutStore = defineStore('workout', {
           plan.cooldownDuration = Math.max(0, plan.cooldownDuration + delta * step)
           break
         case 'rest':
-          plan.restBetweenRounds = Math.max(0, plan.restBetweenRounds + delta * step)
+          plan.restBetweenSets = Math.max(0, plan.restBetweenSets + delta * step)
           break
       }
       this.savePlans()
@@ -421,7 +449,7 @@ export const useWorkoutStore = defineStore('workout', {
       if (!plan) return
 
       if (this.timerState === 'idle') {
-        this.currentRound = 1
+        this.currentSet = 1
         this.currentExerciseIndex = 0
         this.totalElapsed = 0
 
@@ -461,7 +489,7 @@ export const useWorkoutStore = defineStore('workout', {
         timerInterval = null
       }
       this.currentPhase = 'idle'
-      this.currentRound = 1
+      this.currentSet = 1
       this.currentExerciseIndex = 0
       this.timeRemaining = plan?.warmupDuration || 30
       this.totalElapsed = 0
@@ -488,46 +516,58 @@ export const useWorkoutStore = defineStore('workout', {
       if (!plan) return
 
       if (this.currentPhase === 'warmup') {
-        // Warmup done - start first exercise
+        // Warmup done - start first exercise, set 1
         this.currentExerciseIndex = 0
+        this.currentSet = 1
         this.currentPhase = 'exercise'
         const exercise = plan.exercises[0]
         this.timeRemaining = exercise?.duration || 30
         if (exercise) {
-          audio?.speak(exercise.name)
+          audio?.speak(`${exercise.name}, set ${this.currentSet}`)
           audio?.playPhaseStart()
         }
       } else if (this.currentPhase === 'exercise') {
-        // Check if there are more exercises in this round
-        if (this.currentExerciseIndex < plan.exercises.length - 1) {
-          // Next exercise in same round
-          this.currentExerciseIndex++
-          const exercise = plan.exercises[this.currentExerciseIndex]
-          this.timeRemaining = exercise.duration
-          audio?.speak(exercise.name)
-          audio?.playPhaseStart()
+        const currentExercise = plan.exercises[this.currentExerciseIndex]
+
+        // Check if we have more sets of this exercise
+        if (this.currentSet < currentExercise.sets) {
+          // More sets to go - rest between sets
+          if (plan.restBetweenSets > 0) {
+            this.currentPhase = 'rest'
+            this.timeRemaining = plan.restBetweenSets
+            audio?.speak('Rest')
+            audio?.playPhaseStart()
+          } else {
+            // No rest - start next set immediately
+            this.currentSet++
+            this.timeRemaining = currentExercise?.duration || 30
+            if (currentExercise) {
+              audio?.speak(`${currentExercise.name}, set ${this.currentSet}`)
+              audio?.playPhaseStart()
+            }
+          }
         } else {
-          // Last exercise done - check if more rounds or cooldown
-          if (this.currentRound < plan.rounds) {
-            // More rounds to go
-            if (plan.restBetweenRounds > 0) {
+          // All sets of this exercise done - move to next exercise
+          if (this.currentExerciseIndex < plan.exercises.length - 1) {
+            // More exercises to go
+            if (plan.restBetweenExercises > 0) {
               this.currentPhase = 'rest'
-              this.timeRemaining = plan.restBetweenRounds
+              this.timeRemaining = plan.restBetweenExercises
               audio?.speak('Rest')
               audio?.playPhaseStart()
             } else {
-              // No rest - start next round immediately
-              this.currentRound++
-              this.currentExerciseIndex = 0
-              const exercise = plan.exercises[0]
-              this.timeRemaining = exercise?.duration || 30
-              if (exercise) {
-                audio?.speak(`Round ${this.currentRound}, ${exercise.name}`)
+              // No rest - start next exercise immediately
+              this.currentExerciseIndex++
+              this.currentSet = 1
+              const nextExercise = plan.exercises[this.currentExerciseIndex]
+              this.timeRemaining = nextExercise?.duration || 30
+              if (nextExercise) {
+                audio?.speak(`${nextExercise.name}, set ${this.currentSet}`)
                 audio?.playPhaseStart()
               }
             }
           } else {
-            // All rounds done - cooldown
+            // All exercises done - cooldown
             if (plan.cooldownDuration > 0) {
               this.currentPhase = 'cooldown'
               this.timeRemaining = plan.cooldownDuration
@@ -538,15 +578,29 @@ export const useWorkoutStore = defineStore('workout', {
           }
         }
       } else if (this.currentPhase === 'rest') {
-        // Rest done - start next round
-        this.currentRound++
-        this.currentExerciseIndex = 0
-        this.currentPhase = 'exercise'
-        const exercise = plan.exercises[0]
-        this.timeRemaining = exercise?.duration || 30
-        if (exercise) {
-          audio?.speak(`Round ${this.currentRound}, ${exercise.name}`)
-          audio?.playPhaseStart()
+        const currentExercise = plan.exercises[this.currentExerciseIndex]
+
+        // Determine if this rest was between sets or between exercises
+        if (this.currentSet < currentExercise.sets) {
+          // Rest between sets - continue with next set of same exercise
+          this.currentSet++
+          this.currentPhase = 'exercise'
+          this.timeRemaining = currentExercise?.duration || 30
+          if (currentExercise) {
+            audio?.speak(`${currentExercise.name}, set ${this.currentSet}`)
+            audio?.playPhaseStart()
+          }
+        } else {
+          // Rest between exercises - move to next exercise
+          this.currentExerciseIndex++
+          this.currentSet = 1
+          this.currentPhase = 'exercise'
+          const nextExercise = plan.exercises[this.currentExerciseIndex]
+          this.timeRemaining = nextExercise?.duration || 30
+          if (nextExercise) {
+            audio?.speak(`${nextExercise.name}, set ${this.currentSet}`)
+            audio?.playPhaseStart()
+          }
         }
       } else if (this.currentPhase === 'cooldown') {
         this.finishWorkout(true)
@@ -577,7 +631,7 @@ export const useWorkoutStore = defineStore('workout', {
         name: plan?.name || 'Workout',
         date: now.toISOString(),
         time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-        rounds: this.currentRound,
+        rounds: this.currentSet,
         duration: `${min}:${sec}`,
         status: completed ? 'completed' : 'partial',
         note: this.nextWorkoutNote || undefined,
@@ -592,8 +646,8 @@ export const useWorkoutStore = defineStore('workout', {
       if (elapsedMinutes > this.personalRecords.longestWorkoutMinutes) {
         this.personalRecords.longestWorkoutMinutes = Math.round(elapsedMinutes)
       }
-      if (this.currentRound > this.personalRecords.mostRounds) {
-        this.personalRecords.mostRounds = this.currentRound
+      if (this.currentSet > this.personalRecords.mostRounds) {
+        this.personalRecords.mostRounds = this.currentSet
       }
 
       // Update longest streak
