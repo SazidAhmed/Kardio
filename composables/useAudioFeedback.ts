@@ -3,9 +3,38 @@ import { ref } from 'vue'
 // Global mute state shared across all instances
 const isMuted = ref(false)
 
-export function useAudioFeedback() {
-  const audioContext = typeof window !== 'undefined' ? new (window.AudioContext || (window as any).webkitAudioContext)() : null
+// Global audio context - created lazily and only resumed within user gestures
+let audioContext: AudioContext | null = null
 
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null
+
+  if (!audioContext) {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+    if (AudioContextClass) {
+      audioContext = new AudioContextClass()
+    }
+  }
+  return audioContext
+}
+
+async function ensureAudioContextReady(): Promise<boolean> {
+  const ctx = getAudioContext()
+  if (!ctx) return false
+
+  // Mobile browsers require audio context to be resumed within a user gesture
+  if (ctx.state === 'suspended') {
+    try {
+      await ctx.resume()
+    } catch (e) {
+      // Silently fail - audio is not critical
+      return false
+    }
+  }
+  return true
+}
+
+export function useAudioFeedback() {
   function setMuted(muted: boolean) {
     isMuted.value = muted
   }
@@ -14,29 +43,42 @@ export function useAudioFeedback() {
     return isMuted.value
   }
 
-  function playBeep(frequency: number = 800, duration: number = 0.15, type: OscillatorType = 'sine') {
-    if (!audioContext || isMuted.value) return
+  async function playBeep(frequency: number = 800, duration: number = 0.15, type: OscillatorType = 'sine') {
+    const ctx = getAudioContext()
+    if (!ctx || isMuted.value) return
 
-    const oscillator = audioContext.createOscillator()
-    const gainNode = audioContext.createGain()
+    // Ensure context is ready (critical for mobile)
+    const ready = await ensureAudioContextReady()
+    if (!ready) return
 
-    oscillator.connect(gainNode)
-    gainNode.connect(audioContext.destination)
+    try {
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
 
-    oscillator.frequency.value = frequency
-    oscillator.type = type
+      oscillator.connect(gainNode)
+      gainNode.connect(ctx.destination)
 
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration)
+      oscillator.frequency.value = frequency
+      oscillator.type = type
 
-    oscillator.start(audioContext.currentTime)
-    oscillator.stop(audioContext.currentTime + duration)
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration)
+
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + duration)
+    } catch {
+      // Silently fail - audio is not critical
+    }
   }
 
-  function playCountdown() {
+  async function playCountdown() {
     // 3-2-1 pattern: higher pitch for each count
-    const now = audioContext?.currentTime || 0
-    if (!audioContext) return
+    const ctx = getAudioContext()
+    if (!ctx) return
+
+    // Ensure context is ready
+    const ready = await ensureAudioContextReady()
+    if (!ready) return
 
     // 3
     setTimeout(() => playBeep(600, 0.2), 0)
@@ -46,24 +88,33 @@ export function useAudioFeedback() {
     setTimeout(() => playBeep(1000, 0.3), 2000)
   }
 
-  function playPhaseStart() {
+  async function playPhaseStart() {
     // A pleasant chime for phase start
-    if (!audioContext || isMuted.value) return
+    const ctx = getAudioContext()
+    if (!ctx || isMuted.value) return
 
-    const oscillator = audioContext.createOscillator()
-    const gainNode = audioContext.createGain()
+    // Ensure context is ready (critical for mobile)
+    const ready = await ensureAudioContextReady()
+    if (!ready) return
 
-    oscillator.connect(gainNode)
-    gainNode.connect(audioContext.destination)
+    try {
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
 
-    oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime) // C5
-    oscillator.frequency.exponentialRampToValueAtTime(1046.5, audioContext.currentTime + 0.1) // C6
+      oscillator.connect(gainNode)
+      gainNode.connect(ctx.destination)
 
-    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+      oscillator.frequency.setValueAtTime(523.25, ctx.currentTime) // C5
+      oscillator.frequency.exponentialRampToValueAtTime(1046.5, ctx.currentTime + 0.1) // C6
 
-    oscillator.start(audioContext.currentTime)
-    oscillator.stop(audioContext.currentTime + 0.5)
+      gainNode.gain.setValueAtTime(0.2, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
+
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + 0.5)
+    } catch {
+      // Silently fail - audio is not critical
+    }
   }
 
   function speak(text: string) {
@@ -94,7 +145,7 @@ export function useAudioFeedback() {
     vibrate(pattern)
   }
 
-  function playPhaseChange(phaseName: string, secondsRemaining: number = 0) {
+  async function playPhaseChange(phaseName: string, secondsRemaining: number = 0) {
     // Announce the new phase
     const announcements: Record<string, string> = {
       warmup: 'Warm up',
@@ -106,7 +157,7 @@ export function useAudioFeedback() {
     const announcement = announcements[phaseName]
     if (announcement) {
       speak(announcement)
-      playPhaseStart()
+      await playPhaseStart()
       vibrateIfEnabled([100, 50, 100])
     }
 

@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
-import { useAudioFeedback } from '~/composables/useAudioFeedback'
 
 // Audio feedback instance (created lazily to avoid SSR issues)
-let audioFeedback: ReturnType<typeof useAudioFeedback> | null = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let audioFeedback: any = null
 
 function getAudioFeedback() {
   if (!audioFeedback && typeof window !== 'undefined') {
+    // useAudioFeedback is auto-imported by Nuxt from composables/
+    // @ts-expect-error - Nuxt auto-import
     audioFeedback = useAudioFeedback()
   }
   return audioFeedback
@@ -443,7 +445,7 @@ export const useWorkoutStore = defineStore('workout', {
       this.savePlans()
     },
 
-    startTimer() {
+    async startTimer() {
       const audio = getAudioFeedback()
       const plan = this.selectedPlan
       if (!plan) return
@@ -456,11 +458,11 @@ export const useWorkoutStore = defineStore('workout', {
         if (plan.warmupDuration > 0) {
           this.currentPhase = 'warmup'
           this.timeRemaining = plan.warmupDuration
-          audio?.playPhaseChange('warmup')
+          await audio?.playPhaseChange('warmup')
         } else {
           this.currentPhase = 'exercise'
           this.timeRemaining = plan.exercises[0]?.duration || 30
-          audio?.playPhaseChange('exercise')
+          await audio?.playPhaseChange('exercise')
         }
       }
       this.timerState = 'running'
@@ -495,22 +497,22 @@ export const useWorkoutStore = defineStore('workout', {
       this.totalElapsed = 0
     },
 
-    tick() {
+    async tick() {
       const audio = getAudioFeedback()
       this.timeRemaining--
       this.totalElapsed++
 
       // Play countdown beeps for last 3 seconds
       if (this.timeRemaining > 0 && this.timeRemaining <= 3) {
-        audio?.playCountdownBeep(this.timeRemaining)
+        await audio?.playCountdownBeep(this.timeRemaining)
       }
 
       if (this.timeRemaining <= 0) {
-        this.advancePhase()
+        await this.advancePhase()
       }
     },
 
-    advancePhase() {
+    async advancePhase() {
       const audio = getAudioFeedback()
       const plan = this.selectedPlan
       if (!plan) return
@@ -524,7 +526,7 @@ export const useWorkoutStore = defineStore('workout', {
         this.timeRemaining = exercise?.duration || 30
         if (exercise) {
           audio?.speak(`${exercise.name}, set ${this.currentSet}`)
-          audio?.playPhaseStart()
+          await audio?.playPhaseStart()
         }
       } else if (this.currentPhase === 'exercise') {
         const currentExercise = plan.exercises[this.currentExerciseIndex]
@@ -536,14 +538,14 @@ export const useWorkoutStore = defineStore('workout', {
             this.currentPhase = 'rest'
             this.timeRemaining = plan.restBetweenSets
             audio?.speak('Rest')
-            audio?.playPhaseStart()
+            await audio?.playPhaseStart()
           } else {
             // No rest - start next set immediately
             this.currentSet++
             this.timeRemaining = currentExercise?.duration || 30
             if (currentExercise) {
               audio?.speak(`${currentExercise.name}, set ${this.currentSet}`)
-              audio?.playPhaseStart()
+              await audio?.playPhaseStart()
             }
           }
         } else {
@@ -554,7 +556,7 @@ export const useWorkoutStore = defineStore('workout', {
               this.currentPhase = 'rest'
               this.timeRemaining = plan.restBetweenExercises
               audio?.speak('Rest')
-              audio?.playPhaseStart()
+              await audio?.playPhaseStart()
             } else {
               // No rest - start next exercise immediately
               this.currentExerciseIndex++
@@ -563,7 +565,7 @@ export const useWorkoutStore = defineStore('workout', {
               this.timeRemaining = nextExercise?.duration || 30
               if (nextExercise) {
                 audio?.speak(`${nextExercise.name}, set ${this.currentSet}`)
-                audio?.playPhaseStart()
+                await audio?.playPhaseStart()
               }
             }
           } else {
@@ -571,7 +573,7 @@ export const useWorkoutStore = defineStore('workout', {
             if (plan.cooldownDuration > 0) {
               this.currentPhase = 'cooldown'
               this.timeRemaining = plan.cooldownDuration
-              audio?.playPhaseChange('cooldown')
+              await audio?.playPhaseChange('cooldown')
             } else {
               this.finishWorkout(true)
             }
@@ -588,7 +590,7 @@ export const useWorkoutStore = defineStore('workout', {
           this.timeRemaining = currentExercise?.duration || 30
           if (currentExercise) {
             audio?.speak(`${currentExercise.name}, set ${this.currentSet}`)
-            audio?.playPhaseStart()
+            await audio?.playPhaseStart()
           }
         } else {
           // Rest between exercises - move to next exercise
@@ -599,7 +601,7 @@ export const useWorkoutStore = defineStore('workout', {
           this.timeRemaining = nextExercise?.duration || 30
           if (nextExercise) {
             audio?.speak(`${nextExercise.name}, set ${this.currentSet}`)
-            audio?.playPhaseStart()
+            await audio?.playPhaseStart()
           }
         }
       } else if (this.currentPhase === 'cooldown') {
