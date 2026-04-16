@@ -345,12 +345,14 @@ const formatTotalTime = computed(() => {
 const dashOffset = computed(() => {
   const circumference = 553 // 2 * PI * 88
   if (store.timerState === 'idle') return circumference
+
+  const plan = store.selectedPlan
   const phaseDuration = (() => {
-    if (store.currentPhase === 'warmup') return store.config.warmup
-    if (store.currentPhase === 'run') return store.config.run
-    if (store.currentPhase === 'walk') return store.config.walk
-    if (store.currentPhase === 'cooldown') return store.config.cooldown
-    return 1
+    if (store.currentPhase === 'warmup') return plan?.warmupDuration || 30
+    if (store.currentPhase === 'exercise') return store.currentExercise?.duration || 30
+    if (store.currentPhase === 'rest') return plan?.restBetweenSets || 30
+    if (store.currentPhase === 'cooldown') return plan?.cooldownDuration || 30
+    return 30
   })()
   const ratio = store.timeRemaining / phaseDuration
   return circumference * ratio
