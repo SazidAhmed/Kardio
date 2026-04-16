@@ -1,6 +1,6 @@
 [build]
   command = "npm run generate -- --preset static"
-  publish = "dist"
+  publish = ".output/public"
 
 [build.environment]
   NODE_VERSION = "22"
