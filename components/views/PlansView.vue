@@ -1228,4 +1228,48 @@ function deletePlan() {
 :global(html.dark-mode) .confirm-modal {
   background: var(--bg-card);
 }
+
+/* Mobile Exercise Editor Improvements */
+@media (max-width: 480px) {
+  .duration-input-wrapper,
+  .sets-input-wrapper {
+    width: 60px;
+    padding: 0 6px;
+  }
+
+  .exercise-name-input {
+    min-width: 80px;
+    font-size: 13px;
+  }
+
+  .exercise-editor {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .exercise-inputs {
+    gap: 6px;
+  }
+
+  .exercise-number {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+
+  .duration-unit,
+  .sets-unit {
+    font-size: 11px;
+  }
+
+  .btn-remove-exercise {
+    width: 24px;
+    height: 24px;
+  }
+
+  .exercise-color {
+    width: 10px;
+    height: 10px;
+  }
+}
 </style>
