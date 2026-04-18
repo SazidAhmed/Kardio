@@ -9,7 +9,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   app: {
     head: {
-      title: 'CardioFlow - Cardio Interval Trainer',
+      title: 'Kardio - Cardio Interval Trainer',
       meta: [
         { name: 'description', content: 'A beautiful cardio interval training timer app to track your workouts and sessions.' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1' },

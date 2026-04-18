@@ -65,7 +65,7 @@ defineEmits<{
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--bg-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-color);
@@ -114,10 +114,5 @@ defineEmits<{
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.2px;
-}
-
-/* Dark Mode */
-:global(html.dark-mode) .bottom-nav {
-  background: rgba(28, 28, 30, 0.92);
 }
 </style>

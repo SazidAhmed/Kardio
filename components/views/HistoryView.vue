@@ -418,7 +418,7 @@ function exportCSV() {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `cardioflow-workouts-${new Date().toISOString().split('T')[0]}.csv`
+  link.download = `kardio-workouts-${new Date().toISOString().split('T')[0]}.csv`
   link.click()
   URL.revokeObjectURL(link.href)
 }
@@ -430,7 +430,7 @@ async function shareWorkout() {
   const totalMinutes = store.totalMinutes
   const streak = store.streak
 
-  const summaryText = `🏃‍♂️ CardioFlow Workout Summary
+  const summaryText = `🏃‍♂️ Kardio Workout Summary
 
 📊 Stats:
 • Total Workouts: ${totalWorkouts}
@@ -449,7 +449,7 @@ Keep pushing! 💪🔥`
   if (navigator.share) {
     try {
       await navigator.share({
-        title: 'My CardioFlow Workout Summary',
+        title: 'My Kardio Workout Summary',
         text: summaryText,
       })
       return
