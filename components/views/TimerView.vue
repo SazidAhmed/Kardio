@@ -161,6 +161,9 @@
         <svg v-if="isMuted" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
         <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
       </button>
+      <div v-if="wakeLockActive" class="wake-lock-indicator" title="Screen wake lock active">
+        🔆
+      </div>
       <div
         class="dial-container"
         :class="{ clickable: store.timerState === 'idle' || store.timerState === 'paused' || store.timerState === 'running' }"
@@ -244,11 +247,16 @@
         Workout Done! Restart
       </button>
     </section>
+
+    <!-- Toast Notification -->
+    <div v-if="showToast" class="toast-notification">
+      {{ toastMessage }}
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useWorkoutStore, type WorkoutPlan, type WorkoutExercise } from '~/stores/workout'
 
 const store = useWorkoutStore()
@@ -257,6 +265,67 @@ const emit = defineEmits<{
 }>()
 
 const isMuted = ref(false) // Simplified - audio feedback handled in store
+
+// Toast notification for achievements
+const showToast = ref(false)
+const toastMessage = ref('')
+
+// Screen Wake Lock
+const wakeLockActive = ref(false)
+let wakeLock: any = null
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return
+  try {
+    wakeLock = await navigator.wakeLock.request('screen')
+    wakeLockActive.value = true
+    wakeLock.addEventListener('release', () => {
+      wakeLockActive.value = false
+    })
+  } catch (err) {
+    console.log('Wake Lock request failed:', err)
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release()
+    wakeLock = null
+    wakeLockActive.value = false
+  }
+}
+
+// Handle visibility change
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && store.timerState === 'running') {
+      requestWakeLock()
+    } else if (document.visibilityState === 'hidden') {
+      releaseWakeLock()
+    }
+  })
+}
+
+// Watch timer state to handle wake lock
+watch(() => store.timerState, (newState) => {
+  if (newState === 'running') {
+    requestWakeLock()
+  } else if (newState === 'paused' || newState === 'finished' || newState === 'idle') {
+    releaseWakeLock()
+  }
+
+  // Show achievement toast when workout finishes
+  if (newState === 'finished') {
+    const newlyUnlocked = store.checkAchievements()
+    if (newlyUnlocked.length > 0) {
+      toastMessage.value = `🏆 Achievement Unlocked: ${newlyUnlocked[0]}${newlyUnlocked.length > 1 ? ` + ${newlyUnlocked.length - 1} more` : ''}`
+      showToast.value = true
+      setTimeout(() => {
+        showToast.value = false
+      }, 4000)
+    }
+  }
+})
 
 function toggleMute() {
   isMuted.value = !isMuted.value
@@ -687,6 +756,16 @@ const dashOffset = computed(() => {
   color: var(--accent-primary);
 }
 
+/* Wake Lock Indicator */
+.wake-lock-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 14px;
+  opacity: 0.8;
+  z-index: 10;
+}
+
 .timer-section {
   position: relative;
 }
@@ -868,5 +947,34 @@ const dashOffset = computed(() => {
 .preset-card.favorite {
   border-color: #ff9500;
   background: #fff8f0;
+}
+
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 2px solid var(--accent-primary);
+  border-radius: var(--radius-full);
+  padding: 12px 20px;
+  box-shadow: 0 4px 20px rgba(88, 86, 214, 0.4);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  z-index: 1000;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 </style>

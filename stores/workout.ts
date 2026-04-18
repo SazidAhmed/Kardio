@@ -48,13 +48,76 @@ export interface WorkoutSession {
   note?: string
 }
 
+// Achievement system
+export interface Achievement {
+  id: string
+  name: string
+  icon: string
+  description: string
+  unlocked: boolean
+  unlockedAt?: string
+}
+
 export type TimerPhase = 'idle' | 'warmup' | 'exercise' | 'rest' | 'cooldown' | 'finished'
 
 const STORAGE_KEY = 'cardioflow-history'
 const PLANS_STORAGE_KEY = 'cardioflow-plans'
+const ACHIEVEMENTS_STORAGE_KEY = 'cardioflow-achievements'
 
 // Store interval outside of Pinia state to avoid SSR serialization issues
 let timerInterval: ReturnType<typeof setInterval> | null = null
+
+// Achievement definitions
+const achievementDefinitions: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
+  {
+    id: 'first_step',
+    name: 'First Step',
+    icon: '🏃',
+    description: 'Complete your first workout',
+  },
+  {
+    id: 'on_fire',
+    name: 'On Fire',
+    icon: '🔥',
+    description: '3-day streak',
+  },
+  {
+    id: 'dedicated',
+    name: 'Dedicated',
+    icon: '💎',
+    description: '7-day streak',
+  },
+  {
+    id: 'unstoppable',
+    name: 'Unstoppable',
+    icon: '⚡',
+    description: '14-day streak',
+  },
+  {
+    id: 'workout_warrior',
+    name: 'Workout Warrior',
+    icon: '🏋️',
+    description: '10 total workouts',
+  },
+  {
+    id: 'century_club',
+    name: 'Century Club',
+    icon: '⏱️',
+    description: '100 total minutes',
+  },
+  {
+    id: 'goal_crusher',
+    name: 'Goal Crusher',
+    icon: '🎯',
+    description: 'Hit weekly target 4 times',
+  },
+  {
+    id: 'beast_mode',
+    name: 'Beast Mode',
+    icon: '💪',
+    description: 'Complete a workout with 5+ rounds',
+  },
+]
 
 // Default plans for new users
 const defaultPlans: WorkoutPlan[] = [
@@ -146,6 +209,9 @@ export const useWorkoutStore = defineStore('workout', {
 
     // Workout notes for next session
     nextWorkoutNote: '' as string,
+
+    // Achievements
+    achievements: [] as Achievement[],
   }),
 
   getters: {
@@ -230,6 +296,42 @@ export const useWorkoutStore = defineStore('workout', {
       const weekAgo = new Date(now)
       weekAgo.setDate(weekAgo.getDate() - 7)
       return state.history.filter(s => new Date(s.date) >= weekAgo)
+    },
+
+    // Get daily minutes for the last 7 days (for weekly chart)
+    dailyMinutesLast7Days(state): number[] {
+      const days: number[] = []
+      const now = new Date()
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now)
+        date.setDate(date.getDate() - i)
+        const dateStr = date.toDateString()
+        const daySessions = state.history.filter(s => new Date(s.date).toDateString() === dateStr)
+        const totalMinutes = daySessions.reduce((sum, s) => {
+          const [min, sec] = s.duration.split(':').map(Number)
+          return sum + min + sec / 60
+        }, 0)
+        days.push(Math.round(totalMinutes))
+      }
+      return days
+    },
+
+    // Get daily minutes for the last 30 days (for monthly chart)
+    dailyMinutesLast30Days(state): number[] {
+      const days: number[] = []
+      const now = new Date()
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(now)
+        date.setDate(date.getDate() - i)
+        const dateStr = date.toDateString()
+        const daySessions = state.history.filter(s => new Date(s.date).toDateString() === dateStr)
+        const totalMinutes = daySessions.reduce((sum, s) => {
+          const [min, sec] = s.duration.split(':').map(Number)
+          return sum + min + sec / 60
+        }, 0)
+        days.push(Math.round(totalMinutes))
+      }
+      return days
     },
 
     // Helper to get exercise color
@@ -360,6 +462,23 @@ export const useWorkoutStore = defineStore('workout', {
       }
     },
 
+    // Duplicate a plan
+    duplicatePlan(id: string) {
+      const plan = this.plans.find(p => p.id === id)
+      if (!plan) return null
+
+      const newPlan: WorkoutPlan = {
+        ...JSON.parse(JSON.stringify(plan)),
+        id: Date.now().toString(),
+        name: `${plan.name} (Copy)`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      this.plans.push(newPlan)
+      this.savePlans()
+      return newPlan.id
+    },
+
     // Select a plan for workout
     selectPlan(id: string) {
       this.selectedPlanId = id
@@ -399,6 +518,123 @@ export const useWorkoutStore = defineStore('workout', {
       } else {
         this.plans = [...defaultPlans]
       }
+    },
+
+    // Save achievements to localStorage
+    saveAchievements() {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(this.achievements))
+      }
+    },
+
+    // Load achievements from localStorage
+    loadAchievements() {
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem(ACHIEVEMENTS_STORAGE_KEY)
+        if (stored) {
+          try {
+            this.achievements = JSON.parse(stored)
+          } catch {
+            this.achievements = achievementDefinitions.map(def => ({
+              ...def,
+              unlocked: false,
+            }))
+          }
+        } else {
+          // First time - initialize with all locked
+          this.achievements = achievementDefinitions.map(def => ({
+            ...def,
+            unlocked: false,
+          }))
+        }
+      } else {
+        this.achievements = achievementDefinitions.map(def => ({
+          ...def,
+          unlocked: false,
+        }))
+      }
+    },
+
+    // Check and unlock achievements
+    checkAchievements(): string[] {
+      const newlyUnlocked: string[] = []
+
+      // First Step - first workout completed
+      if (this.history.length >= 1) {
+        const firstStep = this.achievements.find(a => a.id === 'first_step')
+        if (firstStep && !firstStep.unlocked) {
+          firstStep.unlocked = true
+          firstStep.unlockedAt = new Date().toISOString()
+          newlyUnlocked.push(firstStep.name)
+        }
+      }
+
+      // On Fire - 3-day streak
+      if (this.streak >= 3) {
+        const onFire = this.achievements.find(a => a.id === 'on_fire')
+        if (onFire && !onFire.unlocked) {
+          onFire.unlocked = true
+          onFire.unlockedAt = new Date().toISOString()
+          newlyUnlocked.push(onFire.name)
+        }
+      }
+
+      // Dedicated - 7-day streak
+      if (this.streak >= 7) {
+        const dedicated = this.achievements.find(a => a.id === 'dedicated')
+        if (dedicated && !dedicated.unlocked) {
+          dedicated.unlocked = true
+          dedicated.unlockedAt = new Date().toISOString()
+          newlyUnlocked.push(dedicated.name)
+        }
+      }
+
+      // Unstoppable - 14-day streak
+      if (this.streak >= 14) {
+        const unstoppable = this.achievements.find(a => a.id === 'unstoppable')
+        if (unstoppable && !unstoppable.unlocked) {
+          unstoppable.unlocked = true
+          unstoppable.unlockedAt = new Date().toISOString()
+          newlyUnlocked.push(unstoppable.name)
+        }
+      }
+
+      // Workout Warrior - 10 total workouts
+      if (this.history.length >= 10) {
+        const warrior = this.achievements.find(a => a.id === 'workout_warrior')
+        if (warrior && !warrior.unlocked) {
+          warrior.unlocked = true
+          warrior.unlockedAt = new Date().toISOString()
+          newlyUnlocked.push(warrior.name)
+        }
+      }
+
+      // Century Club - 100 total minutes
+      if (this.totalMinutes >= 100) {
+        const century = this.achievements.find(a => a.id === 'century_club')
+        if (century && !century.unlocked) {
+          century.unlocked = true
+          century.unlockedAt = new Date().toISOString()
+          newlyUnlocked.push(century.name)
+        }
+      }
+
+      // Beast Mode - workout with 5+ rounds
+      const latestWorkout = this.history[0]
+      if (latestWorkout && latestWorkout.rounds >= 5) {
+        const beast = this.achievements.find(a => a.id === 'beast_mode')
+        if (beast && !beast.unlocked) {
+          beast.unlocked = true
+          beast.unlockedAt = new Date().toISOString()
+          newlyUnlocked.push(beast.name)
+        }
+      }
+
+      if (newlyUnlocked.length > 0) {
+        this.saveAchievements()
+      }
+
+      return newlyUnlocked
     },
 
     // Legacy: Keep for backward compatibility with existing calls
@@ -660,6 +896,10 @@ export const useWorkoutStore = defineStore('workout', {
 
       this.saveHistory()
       this.saveSettings()
+
+      // Check for new achievements
+      const newlyUnlocked = this.checkAchievements()
+
       this.timerState = 'finished'
     },
 
