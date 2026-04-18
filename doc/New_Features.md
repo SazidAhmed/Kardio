@@ -25,3 +25,21 @@ Nice-to-Have
 🌐 Multi-language — i18n support for broader reach
 🎯 Weekly Goals — Customizable weekly target (partially exists as weeklyTargetMinutes)
 💪 Exercise Library — Browse a built-in library of exercises with descriptions and form tips
+
+High Impact
+
+📱 PWA Install — Make it installable with offline support, service worker, and manifest. Users can add to home screen.
+🔔 Workout Reminders — Daily reminder notifications at a set time via Web Notifications API
+🎵 Custom Audio Cues — Pick different sounds for phase transitions (beep, voice, tone)
+⏱️ Countdown Voice — Spoken "3, 2, 1" before each phase (Web Speech API — useAudioFeedback already has speak())
+Medium Impact
+
+🔄 Duplicate Plan — Clone an existing plan as a starting point for a new one
+📋 Workout Notes — Add notes per session (nextWorkoutNote exists in store but isn't exposed in UI)
+⏲️ Halfway Alert — Sound/vibration cue at the midpoint of each exercise
+🎨 Custom Accent Colors — Let users pick their accent color beyond purple
+Nice-to-Have
+
+📥/📤 Import/Export Plans — Share plan configs via JSON
+🌐 Multi-language — i18n support
+💪 Exercise Library — Built-in library with descriptions and form tips

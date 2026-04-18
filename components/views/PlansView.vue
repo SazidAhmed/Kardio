@@ -48,6 +48,12 @@
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
               </button>
+              <button class="btn-duplicate" @click.stop="duplicatePlan(plan.id)" title="Duplicate plan">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </button>
               <button class="btn-edit" @click.stop="startEditPlan(plan)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -496,6 +502,11 @@ function deletePlan() {
     planToDelete.value = null
   }
 }
+
+function duplicatePlan(planId: string) {
+  store.duplicatePlan(planId)
+}
+
 </script>
 
 <style scoped>
@@ -639,6 +650,7 @@ function deletePlan() {
 }
 
 .btn-star,
+.btn-duplicate,
 .btn-edit,
 .btn-delete {
   width: 32px;
@@ -655,6 +667,7 @@ function deletePlan() {
 }
 
 .btn-star:hover,
+.btn-duplicate:hover,
 .btn-edit:hover {
   background: var(--bg-primary);
   color: var(--text-primary);

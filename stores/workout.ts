@@ -462,6 +462,23 @@ export const useWorkoutStore = defineStore('workout', {
       }
     },
 
+    // Duplicate a plan
+    duplicatePlan(id: string) {
+      const plan = this.plans.find(p => p.id === id)
+      if (!plan) return null
+
+      const newPlan: WorkoutPlan = {
+        ...JSON.parse(JSON.stringify(plan)),
+        id: Date.now().toString(),
+        name: `${plan.name} (Copy)`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      this.plans.push(newPlan)
+      this.savePlans()
+      return newPlan.id
+    },
+
     // Select a plan for workout
     selectPlan(id: string) {
       this.selectedPlanId = id

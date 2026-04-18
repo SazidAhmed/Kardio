@@ -12,6 +12,34 @@
       </div>
     </section>
 
+    <!-- Workout Reminder -->
+    <section class="section">
+      <div class="reminder-card">
+        <div class="reminder-setting">
+          <div class="reminder-info">
+            <span class="reminder-setting-icon">🔔</span>
+            <div>
+              <span class="reminder-setting-label">Daily Reminder</span>
+              <span class="reminder-setting-desc">Get notified to work out</span>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" :checked="reminder.reminderEnabled.value" @change="reminder.toggleReminder()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div v-if="reminder.reminderEnabled.value" class="reminder-time-row">
+          <span class="reminder-time-label">Remind at</span>
+          <input
+            type="time"
+            :value="reminder.reminderTime.value"
+            @input="reminder.setReminderTime(($event.target as HTMLInputElement).value)"
+            class="reminder-time-input"
+          />
+        </div>
+      </div>
+    </section>
+
     <!-- Day Selector -->
     <section class="section">
       <div class="day-row">
@@ -331,8 +359,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useWorkoutStore } from '~/stores/workout'
+import { useReminder } from '~/composables/useReminder'
 
 const store = useWorkoutStore()
+const reminder = useReminder()
 const selectedDayIndex = ref<number | null>(null) // null = all days
 const showTargetEdit = ref(false)
 const tempTarget = ref(store.weeklyTargetMinutes)
@@ -1201,6 +1231,118 @@ Keep pushing! 💪🔥`
   font-size: 12px;
   font-weight: 600;
   color: #34c759;
+}
+
+/* Workout Reminder Card */
+.reminder-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.reminder-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reminder-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reminder-setting-icon {
+  font-size: 22px;
+}
+
+.reminder-setting-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.reminder-setting-desc {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--border-color);
+  border-radius: 24px;
+  transition: 0.3s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--accent-primary);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.reminder-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.reminder-time-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.reminder-time-input {
+  padding: 6px 10px;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.reminder-time-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
 }
 
 /* Personal Records */
