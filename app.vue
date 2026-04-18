@@ -2,7 +2,7 @@
   <div class="app-shell">
     <div class="app-container">
       <!-- Header -->
-      <LayoutAppHeader />
+      <LayoutAppHeader :active-tab="activeTab" @tab-change="handleTabChange" />
 
       <!-- Divider -->
       <div class="divider" />

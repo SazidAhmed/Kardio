@@ -17,23 +17,6 @@
 
       <button
         class="nav-item"
-        :class="{ active: activeTab === 'lift' }"
-        @click="$emit('tab-change', 'lift')"
-      >
-        <div class="nav-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6.5 6.5v11M17.5 6.5v11M6.5 12h11M3 9v0M3 15v0M21 9v0M21 15v0" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-            <circle cx="3" cy="9" r="1.5" fill="currentColor"/>
-            <circle cx="3" cy="15" r="1.5" fill="currentColor"/>
-            <circle cx="21" cy="9" r="1.5" fill="currentColor"/>
-            <circle cx="21" cy="15" r="1.5" fill="currentColor"/>
-          </svg>
-        </div>
-        <span class="nav-label">Lift</span>
-      </button>
-
-      <button
-        class="nav-item"
         :class="{ active: activeTab === 'plans' }"
         @click="$emit('tab-change', 'plans')"
       >
