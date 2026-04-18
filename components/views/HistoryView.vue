@@ -336,6 +336,7 @@ const store = useWorkoutStore()
 const selectedDayIndex = ref<number | null>(null) // null = all days
 const showTargetEdit = ref(false)
 const tempTarget = ref(store.weeklyTargetMinutes)
+const chartView = ref<'week' | 'month'>('week')
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -756,11 +757,67 @@ Keep pushing! 💪🔥`
 }
 
 /* Chart */
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.chart-tab {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chart-tab:hover:not(.active) {
+  background: var(--bg-primary);
+}
+
+.chart-tab.active {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
 .chart-card {
   background: var(--bg-card);
   border-radius: var(--radius-md);
   padding: 16px;
   box-shadow: var(--shadow-card);
+}
+
+.weekly-chart,
+.monthly-chart {
+  width: 100%;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+}
+
+.chart-labels {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 8px;
+}
+
+.chart-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .chart-area {
@@ -1238,3 +1295,4 @@ Keep pushing! 💪🔥`
 }
 
 /* Chart */
+</style>
