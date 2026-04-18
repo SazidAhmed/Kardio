@@ -198,8 +198,13 @@
         </svg>
 
         <div class="timer-display">
-          <span class="timer-digits">{{ timerFormatted }}</span>
+          <span v-if="!isCountingDown" class="timer-digits">{{ timerFormatted }}</span>
+          <span v-else class="countdown-digits">{{ countdownValue }}</span>
         </div>
+      </div>
+
+      <div v-if="isCountingDown" class="countdown-overlay">
+        <span class="countdown-number">{{ countdownValue }}</span>
       </div>
 
       <div v-if="store.timerState !== 'idle' && store.currentExercise" class="phase-indicator">
@@ -224,9 +229,9 @@
     <!-- Action Buttons (Timer Tab Only) -->
     <section v-if="activeTab === 'timer'" class="section action-section">
       <button
-        v-if="store.timerState === 'idle'"
+        v-if="store.timerState === 'idle' && !isCountingDown"
         class="btn-start"
-        @click="store.startTimer()"
+        @click="startWithCountdown()"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         Start
@@ -273,8 +278,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useWorkoutStore, type WorkoutPlan, type WorkoutExercise } from '~/stores/workout'
+import { useAudioFeedback } from '~/composables/useAudioFeedback'
 
 const store = useWorkoutStore()
+const audio = useAudioFeedback()
 const emit = defineEmits<{
   'switch-tab': [tab: 'timer' | 'history' | 'plans']
 }>()
@@ -291,6 +298,47 @@ const toastMessage = ref('')
 // Screen Wake Lock
 const wakeLockActive = ref(false)
 let wakeLock: any = null
+
+// Pre-workout countdown (3-2-1)
+const countdownValue = ref<number | null>(null)
+const isCountingDown = computed(() => countdownValue.value !== null)
+
+async function startWithCountdown() {
+  // Start countdown from 3 - beep then show
+  countdownValue.value = 3
+  audio.playBeep(600, 0.2)
+
+  // Wait 1 second
+  await new Promise(r => setTimeout(r, 1000))
+  if (countdownValue.value === null) return // Cancelled
+
+  // Beep for 2
+  countdownValue.value = 2
+  audio.playBeep(800, 0.2)
+
+  // Wait 1 second
+  await new Promise(r => setTimeout(r, 1000))
+  if (countdownValue.value === null) return // Cancelled
+
+  // Beep for 1
+  countdownValue.value = 1
+  audio.playBeep(1000, 0.3)
+
+  // Wait 1 second
+  await new Promise(r => setTimeout(r, 1000))
+
+  // Clear countdown
+  countdownValue.value = null
+
+  // Announce the first exercise and set
+  const firstExercise = selectedPlan.value?.exercises[0]
+  if (firstExercise) {
+    audio.speak(`${firstExercise.name} set 1`)
+  }
+
+  // Start workout
+  store.startTimer()
+}
 
 async function requestWakeLock() {
   if (!('wakeLock' in navigator)) return
@@ -414,7 +462,7 @@ const timerFormatted = computed(() => formatSeconds(store.timeRemaining))
 // Handle click on timer dial - toggle start/pause
 function handleTimerClick() {
   if (store.timerState === 'idle') {
-    store.startTimer()
+    startWithCountdown()
   } else if (store.timerState === 'running') {
     store.pauseTimer()
   } else if (store.timerState === 'paused') {
@@ -764,6 +812,53 @@ const dashOffset = computed(() => {
   color: var(--text-primary);
   letter-spacing: 2px;
   font-variant-numeric: tabular-nums;
+}
+
+.countdown-digits {
+  font-size: 56px;
+  font-weight: 800;
+  color: var(--accent-primary);
+  letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+  animation: pulse 1s ease-in-out;
+}
+
+.countdown-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.countdown-number {
+  font-size: 120px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: countdownPulse 0.9s ease-out;
+}
+
+@keyframes countdownPulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
 .phase-indicator {
