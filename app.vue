@@ -19,6 +19,10 @@
           key="plans-view"
           @select-plan="handlePlanSelected"
         />
+        <ViewsLiftView
+          v-else-if="activeTab === 'lift'"
+          key="lift-view"
+        />
         <ViewsHistoryView
           v-else-if="activeTab === 'history'"
           key="history-view"
@@ -45,10 +49,10 @@ import { useWorkoutStore } from '~/stores/workout'
 import { usePWA } from '~/composables/usePWA'
 
 const store = useWorkoutStore()
-const activeTab = ref<'timer' | 'history' | 'plans'>('timer')
+const activeTab = ref<'timer' | 'lift' | 'history' | 'plans'>('timer')
 const pwa = usePWA()
 
-function handleTabChange(tab: 'timer' | 'history' | 'plans') {
+function handleTabChange(tab: 'timer' | 'lift' | 'history' | 'plans') {
   activeTab.value = tab
 }
 
@@ -57,11 +61,17 @@ function handlePlanSelected() {
   activeTab.value = 'timer'
 }
 
-onMounted(() => {
+onMounted(async () => {
   store.loadHistory()
   store.loadSettings()
   store.loadPlans() // Load workout plans on app start
   store.loadAchievements() // Load achievements
+
+  // Load lift store
+  const { useLiftStore } = await import('~/stores/lift')
+  const liftStore = useLiftStore()
+  liftStore.loadPlans()
+  liftStore.loadHistory()
 })
 </script>
 
