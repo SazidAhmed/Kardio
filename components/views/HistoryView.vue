@@ -430,7 +430,11 @@ async function shareWorkout() {
   const totalMinutes = store.totalMinutes
   const streak = store.streak
 
+  // Find the plan to get exercise details
+  const plan = store.plans.find(p => p.name === latest?.name)
+
   const summaryText = `🏃‍♂️ Kardio Workout Summary
+📅 ${latest ? new Date(latest.date).toLocaleDateString() : new Date().toLocaleDateString()}
 
 📊 Stats:
 • Total Workouts: ${totalWorkouts}
@@ -440,8 +444,8 @@ async function shareWorkout() {
 
 ${latest ? `💪 Latest Workout:
 • ${latest.name} - ${latest.duration}
-• ${latest.rounds} rounds completed
-• ${new Date(latest.date).toLocaleDateString()}` : ''}
+${plan?.exercises ? plan.exercises.map(e => `• ${e.name}: ${e.duration}s × ${e.sets} sets`).join('\n') : ''}
+• ${latest.rounds} rounds completed` : ''}
 
 Keep pushing! 💪🔥`
 
