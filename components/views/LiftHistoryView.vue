@@ -74,14 +74,20 @@
     <section class="section">
       <div class="section-header">
         <label class="section-label">SESSION HISTORY</label>
-        <button v-if="store.history.length > 0" class="btn-export" @click="exportCSV">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Export CSV
-        </button>
+        <div class="section-actions">
+          <button v-if="store.history.length > 0" class="btn-share" @click="shareWorkout" title="Share summary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share
+          </button>
+          <button v-if="store.history.length > 0" class="btn-export" @click="exportCSV">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export CSV
+          </button>
+        </div>
       </div>
       <div v-if="store.history.length === 0" class="empty-state">
         <div class="empty-icon">🏋️</div>
@@ -100,8 +106,13 @@
               <span class="session-name">{{ session.planName }}</span>
               <span class="session-meta">{{ session.date }} · {{ session.duration }} · {{ formatWeight(session.totalVolume) }}kg</span>
             </div>
-            <div class="session-badge" :class="session.status">
-              {{ session.status === 'completed' ? 'DONE' : 'PARTIAL' }}
+            <div class="session-actions">
+              <div class="session-badge" :class="session.status">
+                {{ session.status === 'completed' ? 'DONE' : 'PARTIAL' }}
+              </div>
+              <button class="btn-delete" @click.stop="deleteSession(session.id)" title="Delete session">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
             </div>
           </div>
           <div v-if="expandedSessionId === session.id" class="session-detail">
@@ -219,6 +230,52 @@ function exportCSV() {
   link.download = `kardio-lifting-history-${new Date().toISOString().split('T')[0]}.csv`
   link.click()
   URL.revokeObjectURL(link.href)
+}
+
+function deleteSession(id: string) {
+  store.deleteSession(id)
+}
+
+async function shareWorkout() {
+  const latest = store.history[0]
+  const sessionCount = store.history.length
+  const setsCount = totalSets.value
+  const totalVol = totalVolume.value
+
+  const summaryText = `🏋️ Kardio Lifting Summary
+📅 ${latest ? new Date(latest.date).toLocaleDateString() : new Date().toLocaleDateString()}
+
+📊 Stats:
+• Total Workouts: ${sessionCount}
+• Total Sets: ${setsCount}
+• Total Volume: ${formatWeight(totalVol)}kg
+
+${latest ? `💪 Latest Workout:
+• ${latest.planName} - ${latest.duration}
+• Volume: ${formatWeight(latest.totalVolume)}kg
+• ${latest.exercises.length} exercises completed
+${latest.exercises.map(ex => `  - ${ex.name}: ${ex.sets.filter(s => s.completed).length}/${ex.sets.length} sets`).join('\n')}` : ''}
+
+Keep pushing! 💪🔥`
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'My Kardio Lifting Summary',
+        text: summaryText,
+      })
+      return
+    } catch {
+      // Fall back to clipboard
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(summaryText)
+    alert('Summary copied to clipboard!')
+  } catch {
+    alert('Unable to share. Try manually copying your stats.')
+  }
 }
 </script>
 
@@ -360,6 +417,34 @@ function exportCSV() {
   color: var(--text-secondary);
 }
 
+/* Section Actions */
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Share Button */
+.btn-share {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-share:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
 /* Export Button */
 .btn-export {
   display: flex;
@@ -379,6 +464,33 @@ function exportCSV() {
 .btn-export:hover {
   border-color: var(--accent-primary);
   color: var(--accent-primary);
+}
+
+/* Delete Button */
+.btn-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+  background: #ffebee;
+  color: #ff4444;
+}
+
+/* Session Actions */
+.session-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Empty State */
