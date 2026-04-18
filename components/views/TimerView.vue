@@ -1,9 +1,24 @@
 <template>
   <div class="timer-view">
-    <!-- Workout Plan Selection -->
+    <!-- Tabs Navigation -->
     <section class="section">
       <div class="section-header">
-        <label class="section-label">SELECT PLAN</label>
+        <div class="tabs">
+          <button
+            class="tab-btn"
+            :class="{ active: activeTab === 'timer' }"
+            @click="activeTab = 'timer'"
+          >
+            Timer
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeTab === 'plan' }"
+            @click="activeTab = 'plan'"
+          >
+            Plan
+          </button>
+        </div>
         <button class="btn-manage" @click="emit('switch-tab', 'plans')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -12,7 +27,7 @@
           Manage
         </button>
       </div>
-      <div class="preset-scroll">
+      <div v-if="activeTab === 'plan'" class="preset-scroll">
         <div class="preset-list">
           <button
             v-for="plan in store.plans"
@@ -39,8 +54,8 @@
       </div>
     </section>
 
-    <!-- Exercise Cards - Dynamic from selected plan -->
-    <section class="section">
+    <!-- Exercise Cards - Dynamic from selected plan (Plan Tab Only) -->
+    <section v-if="activeTab === 'plan'" class="section">
       <label class="section-label">EXERCISES</label>
       <div class="exercises-grid">
         <!-- Warmup Card -->
@@ -145,8 +160,8 @@
       </div>
     </section>
 
-    <!-- Workout Summary Card -->
-    <section class="section">
+    <!-- Workout Summary Card (Plan Tab Only) -->
+    <section v-if="activeTab === 'plan'" class="section">
       <div class="summary-card">
         <div class="summary-top">
           <span class="summary-time">{{ formatTotalTime }}</span>
@@ -155,8 +170,8 @@
       </div>
     </section>
 
-    <!-- Circular Timer -->
-    <section class="section timer-section">
+    <!-- Circular Timer (Timer Tab Only) -->
+    <section v-if="activeTab === 'timer'" class="section timer-section">
       <button class="btn-mute" @click.stop="toggleMute" :title="isMuted ? 'Unmute' : 'Mute'">
         <svg v-if="isMuted" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
         <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
@@ -183,8 +198,13 @@
         </svg>
 
         <div class="timer-display">
-          <span class="timer-digits">{{ timerFormatted }}</span>
+          <span v-if="!isCountingDown" class="timer-digits">{{ timerFormatted }}</span>
+          <span v-else class="countdown-digits">{{ countdownValue }}</span>
         </div>
+      </div>
+
+      <div v-if="isCountingDown" class="countdown-overlay">
+        <span class="countdown-number">{{ countdownValue }}</span>
       </div>
 
       <div v-if="store.timerState !== 'idle' && store.currentExercise" class="phase-indicator">
@@ -206,12 +226,12 @@
       </p>
     </section>
 
-    <!-- Action Buttons -->
-    <section class="section action-section">
+    <!-- Action Buttons (Timer Tab Only) -->
+    <section v-if="activeTab === 'timer'" class="section action-section">
       <button
-        v-if="store.timerState === 'idle'"
+        v-if="store.timerState === 'idle' && !isCountingDown"
         class="btn-start"
-        @click="store.startTimer()"
+        @click="startWithCountdown()"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         Start
@@ -258,11 +278,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useWorkoutStore, type WorkoutPlan, type WorkoutExercise } from '~/stores/workout'
+import { useAudioFeedback } from '~/composables/useAudioFeedback'
 
 const store = useWorkoutStore()
+const audio = useAudioFeedback()
 const emit = defineEmits<{
   'switch-tab': [tab: 'timer' | 'history' | 'plans']
 }>()
+
+// Tab state: 'plan' or 'timer'
+const activeTab = ref<'plan' | 'timer'>('timer')
 
 const isMuted = ref(false) // Simplified - audio feedback handled in store
 
@@ -273,6 +298,47 @@ const toastMessage = ref('')
 // Screen Wake Lock
 const wakeLockActive = ref(false)
 let wakeLock: any = null
+
+// Pre-workout countdown (3-2-1)
+const countdownValue = ref<number | null>(null)
+const isCountingDown = computed(() => countdownValue.value !== null)
+
+async function startWithCountdown() {
+  // Start countdown from 3 - beep then show
+  countdownValue.value = 3
+  audio.playBeep(600, 0.2)
+
+  // Wait 1 second
+  await new Promise(r => setTimeout(r, 1000))
+  if (countdownValue.value === null) return // Cancelled
+
+  // Beep for 2
+  countdownValue.value = 2
+  audio.playBeep(800, 0.2)
+
+  // Wait 1 second
+  await new Promise(r => setTimeout(r, 1000))
+  if (countdownValue.value === null) return // Cancelled
+
+  // Beep for 1
+  countdownValue.value = 1
+  audio.playBeep(1000, 0.3)
+
+  // Wait 1 second
+  await new Promise(r => setTimeout(r, 1000))
+
+  // Clear countdown
+  countdownValue.value = null
+
+  // Announce the first exercise and set
+  const firstExercise = selectedPlan.value?.exercises[0]
+  if (firstExercise) {
+    audio.speak(`${firstExercise.name} set 1`)
+  }
+
+  // Start workout
+  store.startTimer()
+}
 
 async function requestWakeLock() {
   if (!('wakeLock' in navigator)) return
@@ -396,7 +462,7 @@ const timerFormatted = computed(() => formatSeconds(store.timeRemaining))
 // Handle click on timer dial - toggle start/pause
 function handleTimerClick() {
   if (store.timerState === 'idle') {
-    store.startTimer()
+    startWithCountdown()
   } else if (store.timerState === 'running') {
     store.pauseTimer()
   } else if (store.timerState === 'paused') {
@@ -447,6 +513,37 @@ const dashOffset = computed(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-card);
+  border-radius: var(--radius-full);
+  padding: 2px;
+  border: 1.5px solid var(--border-color);
+}
+
+.tab-btn {
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  background: var(--accent-primary);
+  color: white;
 }
 
 .section-label {
@@ -715,6 +812,53 @@ const dashOffset = computed(() => {
   color: var(--text-primary);
   letter-spacing: 2px;
   font-variant-numeric: tabular-nums;
+}
+
+.countdown-digits {
+  font-size: 56px;
+  font-weight: 800;
+  color: var(--accent-primary);
+  letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+  animation: pulse 1s ease-in-out;
+}
+
+.countdown-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.countdown-number {
+  font-size: 120px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: countdownPulse 0.9s ease-out;
+}
+
+@keyframes countdownPulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
 .phase-indicator {

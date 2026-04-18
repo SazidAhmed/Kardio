@@ -268,10 +268,10 @@
             class="btn-danger-outline"
             @click="closeEditor(); confirmDeletePlan(editingPlan)"
           >
-            Delete Plan
+            Delete
           </button>
           <button class="btn-primary" @click="savePlan">
-            {{ editingPlan ? 'Save Changes' : 'Create Plan' }}
+            {{ editingPlan ? 'Save' : 'Create' }}
           </button>
         </div>
       </div>
@@ -1151,7 +1151,7 @@ function duplicatePlan(planId: string) {
 .btn-secondary,
 .btn-danger {
   flex: 1;
-  padding: 14px;
+  padding: 10px 16px;
   border-radius: var(--radius-full);
   font-size: 15px;
   font-weight: 600;
@@ -1189,7 +1189,7 @@ function duplicatePlan(planId: string) {
 
 .btn-danger-outline {
   flex: 1;
-  padding: 14px;
+  padding: 10px 16px;
   border-radius: var(--radius-full);
   font-size: 15px;
   font-weight: 600;
