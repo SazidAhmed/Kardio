@@ -10,31 +10,28 @@
         <h1 class="logo-text">Kardio</h1>
       </div>
       <div class="header-actions">
-        <button
-          class="header-btn"
-          :class="{ active: activeTab === 'lift' }"
-          @click="switchToLift"
-          title="Weight Lifting"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6.5 6.5v11M17.5 6.5v11M6.5 12h11M3 9v0M3 15v0M21 9v0M21 15v0" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-            <circle cx="3" cy="9" r="1.5" fill="currentColor"/>
-            <circle cx="3" cy="15" r="1.5" fill="currentColor"/>
-            <circle cx="21" cy="9" r="1.5" fill="currentColor"/>
-            <circle cx="21" cy="15" r="1.5" fill="currentColor"/>
-          </svg>
-        </button>
-        <button
-          class="header-btn"
-          :class="{ active: activeTab === 'timer' }"
-          @click="$emit('tab-change', 'timer')"
-          title="Cardio Timer"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="9"/>
-            <polyline points="12 7 12 12 15 15"/>
-          </svg>
-        </button>
+        <!-- Mode Switcher -->
+        <div class="mode-switcher">
+          <button
+            class="mode-btn"
+            :class="{ active: currentMode === 'cardio' }"
+            @click="setMode('cardio')"
+            title="Cardio Mode"
+          >
+            <span class="mode-icon">🔥</span>
+            <span class="mode-label">Cardio</span>
+          </button>
+          <button
+            class="mode-btn"
+            :class="{ active: currentMode === 'lifting' }"
+            @click="setMode('lifting')"
+            title="Lifting Mode"
+          >
+            <span class="mode-icon">💪</span>
+            <span class="mode-label">Lifting</span>
+          </button>
+        </div>
+
         <button
           class="theme-toggle"
           @click="toggleDarkMode"
@@ -61,17 +58,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useModeStore, type AppMode } from '~/stores/mode'
+
+const modeStore = useModeStore()
 
 const props = defineProps<{
-  activeTab: 'timer' | 'lift' | 'history' | 'plans'
+  activeTab: 'timer' | 'plans' | 'history'
 }>()
 
 const emit = defineEmits<{
-  'tab-change': [tab: 'timer' | 'lift' | 'history' | 'plans']
+  'tab-change': [tab: 'timer' | 'plans' | 'history']
+  'mode-change': [mode: AppMode]
 }>()
 
 const isDarkMode = ref(false)
+
+const currentMode = computed(() => modeStore.currentMode)
 
 function toggleDarkMode() {
   isDarkMode.value = !isDarkMode.value
@@ -79,8 +82,9 @@ function toggleDarkMode() {
   localStorage.setItem('cardioflow-dark-mode', isDarkMode.value.toString())
 }
 
-function switchToLift() {
-  emit('tab-change', 'lift')
+function setMode(mode: AppMode) {
+  modeStore.setMode(mode)
+  emit('mode-change', mode)
 }
 
 onMounted(() => {
@@ -185,5 +189,54 @@ onMounted(() => {
   border-color: var(--accent-primary);
   background: var(--accent-glow);
   color: var(--accent-primary);
+}
+
+/* Mode Switcher */
+.mode-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-primary);
+  padding: 4px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border-color);
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover {
+  color: var(--text-primary);
+}
+
+.mode-btn.active {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.mode-icon {
+  font-size: 14px;
+}
+
+.mode-label {
+  display: none;
+}
+
+@media (min-width: 380px) {
+  .mode-label {
+    display: inline;
+  }
 }
 </style>

@@ -1,7 +1,9 @@
 <template>
   <nav class="bottom-nav">
-    <div class="nav-content">
+    <div class="nav-content" :class="{ 'two-items': currentMode === 'lifting' }">
+      <!-- Timer Tab - Only for Cardio mode -->
       <button
+        v-if="currentMode === 'cardio'"
         class="nav-item"
         :class="{ active: activeTab === 'timer' }"
         @click="$emit('tab-change', 'timer')"
@@ -15,6 +17,7 @@
         <span class="nav-label">Timer</span>
       </button>
 
+      <!-- Plans Tab - Available in both modes -->
       <button
         class="nav-item"
         :class="{ active: activeTab === 'plans' }"
@@ -31,6 +34,7 @@
         <span class="nav-label">Plans</span>
       </button>
 
+      <!-- History Tab - Available in both modes -->
       <button
         class="nav-item"
         :class="{ active: activeTab === 'history' }"
@@ -51,12 +55,19 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  activeTab: 'timer' | 'lift' | 'history' | 'plans'
+import { computed } from 'vue'
+import { useModeStore, type AppMode } from '~/stores/mode'
+
+const props = defineProps<{
+  activeTab: 'timer' | 'plans' | 'history'
+  mode: AppMode
 }>()
-defineEmits<{
-  'tab-change': [tab: 'timer' | 'lift' | 'history' | 'plans']
+
+const emit = defineEmits<{
+  'tab-change': [tab: 'timer' | 'plans' | 'history']
 }>()
+
+const currentMode = computed(() => props.mode)
 </script>
 
 <style scoped>
@@ -79,6 +90,16 @@ defineEmits<{
   width: 100%;
   max-width: 480px;
   padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+}
+
+.nav-content.two-items {
+  justify-content: center;
+  gap: 24px;
+}
+
+.nav-content.two-items .nav-item {
+  flex: 0 0 auto;
+  min-width: 80px;
 }
 
 .nav-item {

@@ -79,36 +79,6 @@
         </div>
       </section>
 
-      <!-- Lift History -->
-      <section class="section">
-        <label class="section-label">HISTORY</label>
-        <div v-if="store.history.length === 0" class="empty-state">
-          <span>No lift sessions yet</span>
-        </div>
-        <div v-else class="history-list">
-          <div v-for="session in store.history.slice(0, 10)" :key="session.id" class="history-card" @click="toggleHistoryDetail(session.id)">
-            <div class="history-top">
-              <span class="history-name">{{ session.planName }}</span>
-              <span class="history-date">{{ session.date }}</span>
-            </div>
-            <div class="history-meta">
-              <span>{{ session.totalVolume }}kg volume</span>
-              <span>{{ session.duration }}</span>
-              <span :class="session.status">{{ session.status }}</span>
-            </div>
-            <div v-if="expandedSessionId === session.id" class="history-detail">
-              <div v-for="ex in session.exercises" :key="ex.id" class="detail-exercise">
-                <span class="detail-ex-name">{{ ex.name }}</span>
-                <div class="detail-sets">
-                  <span v-for="(s, i) in ex.sets" :key="i" class="detail-set" :class="{ done: s.completed }">
-                    {{ s.reps }}×{{ s.weight }}kg
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     </template>
 
     <!-- Active Workout State -->
@@ -384,7 +354,6 @@ const showEditor = ref(false)
 const editingPlan = ref<LiftPlan | null>(null)
 const showDeleteConfirm = ref(false)
 const planToDelete = ref<LiftPlan | null>(null)
-const expandedSessionId = ref<string | null>(null)
 
 const availableIcons = ['💪', '🏋️', '🦵', '🔥', '⚡', '🏃', '🚴', '⭐', '💎', '🎯', '🚀', '🧱']
 
@@ -469,10 +438,6 @@ function deletePlan() {
     planToDelete.value = null
   }
   showDeleteConfirm.value = false
-}
-
-function toggleHistoryDetail(id: string) {
-  expandedSessionId.value = expandedSessionId.value === id ? null : id
 }
 
 // Computed
@@ -1107,101 +1072,6 @@ async function startWorkout() {
   font-weight: 600;
   color: var(--text-primary);
   margin-left: 4px;
-}
-
-/* History */
-.empty-state {
-  text-align: center;
-  padding: 20px;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.history-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  border: 1.5px solid var(--border-color);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.history-card:hover {
-  border-color: var(--accent-primary);
-}
-
-.history-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.history-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.history-date {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.history-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.history-meta .completed { color: #34c759; font-weight: 600; }
-.history-meta .partial { color: #ff9500; font-weight: 600; }
-
-.history-detail {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.detail-exercise {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.detail-ex-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.detail-sets {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.detail-set {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-}
-
-.detail-set.done {
-  background: #e8f5e9;
-  color: #34c759;
 }
 
 /* Modal */

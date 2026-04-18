@@ -2,31 +2,46 @@
   <div class="app-shell">
     <div class="app-container">
       <!-- Header -->
-      <LayoutAppHeader :active-tab="activeTab" @tab-change="handleTabChange" />
+      <LayoutAppHeader
+        :active-tab="activeTab"
+        @tab-change="handleTabChange"
+        @mode-change="handleModeChange"
+      />
 
       <!-- Divider -->
       <div class="divider" />
 
       <!-- Page Content -->
       <main class="main-content">
-        <ViewsTimerView
-          v-if="activeTab === 'timer'"
-          key="timer-view"
-          @switch-tab="handleTabChange"
-        />
-        <ViewsPlansView
-          v-else-if="activeTab === 'plans'"
-          key="plans-view"
-          @select-plan="handlePlanSelected"
-        />
-        <ViewsLiftView
-          v-else-if="activeTab === 'lift'"
-          key="lift-view"
-        />
-        <ViewsHistoryView
-          v-else-if="activeTab === 'history'"
-          key="history-view"
-        />
+        <!-- Cardio Mode Views -->
+        <template v-if="modeStore.isCardioMode">
+          <ViewsTimerView
+            v-if="activeTab === 'timer'"
+            key="timer-view"
+            @switch-tab="handleTabChange"
+          />
+          <ViewsCardioPlansView
+            v-else-if="activeTab === 'plans'"
+            key="cardio-plans-view"
+            @select-plan="handlePlanSelected"
+          />
+          <ViewsCardioHistoryView
+            v-else-if="activeTab === 'history'"
+            key="cardio-history-view"
+          />
+        </template>
+
+        <!-- Lifting Mode Views -->
+        <template v-if="modeStore.isLiftingMode">
+          <ViewsLiftPlansView
+            v-if="activeTab === 'plans'"
+            key="lift-plans-view"
+          />
+          <ViewsLiftHistoryView
+            v-else-if="activeTab === 'history'"
+            key="lift-history-view"
+          />
+        </template>
       </main>
 
       <!-- PWA Install Banner -->
@@ -38,34 +53,53 @@
       </div>
 
       <!-- Bottom Nav -->
-      <LayoutBottomNav :active-tab="activeTab" @tab-change="handleTabChange" />
+      <LayoutBottomNav
+        :active-tab="activeTab"
+        :mode="modeStore.currentMode"
+        @tab-change="handleTabChange"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useWorkoutStore } from '~/stores/workout'
+import { useModeStore, type AppMode, type CardioTab, type LiftingTab } from '~/stores/mode'
 import { usePWA } from '~/composables/usePWA'
 
 const store = useWorkoutStore()
-const activeTab = ref<'timer' | 'lift' | 'history' | 'plans'>('timer')
+const modeStore = useModeStore()
 const pwa = usePWA()
 
-function handleTabChange(tab: 'timer' | 'lift' | 'history' | 'plans') {
-  activeTab.value = tab
+// Active tab based on current mode
+const activeTab = computed(() => modeStore.activeTab)
+
+function handleTabChange(tab: CardioTab | LiftingTab) {
+  modeStore.switchTab(tab)
+}
+
+function handleModeChange(mode: AppMode) {
+  // Mode is already set in the store, this just handles any additional side effects
+  // The view will automatically re-render based on the new mode
 }
 
 function handlePlanSelected() {
-  // Switch to timer tab when a plan is selected
-  activeTab.value = 'timer'
+  // Switch to timer tab when a plan is selected (only in cardio mode)
+  if (modeStore.isCardioMode) {
+    modeStore.setCardioTab('timer')
+  }
 }
 
 onMounted(async () => {
+  // Load mode from storage
+  modeStore.loadMode()
+
+  // Load cardio store data
   store.loadHistory()
   store.loadSettings()
-  store.loadPlans() // Load workout plans on app start
-  store.loadAchievements() // Load achievements
+  store.loadPlans()
+  store.loadAchievements()
 
   // Load lift store
   const { useLiftStore } = await import('~/stores/lift')
