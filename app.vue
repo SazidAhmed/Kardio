@@ -51,6 +51,7 @@ onMounted(() => {
   store.loadHistory()
   store.loadSettings()
   store.loadPlans() // Load workout plans on app start
+  store.loadAchievements() // Load achievements
 })
 </script>
 

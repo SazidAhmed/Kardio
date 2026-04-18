@@ -71,6 +71,85 @@
       </div>
     </section>
 
+    <!-- Charts -->
+    <section class="section">
+      <div class="chart-header">
+        <label class="section-label">ACTIVITY</label>
+        <div class="chart-tabs">
+          <button
+            class="chart-tab"
+            :class="{ active: chartView === 'week' }"
+            @click="chartView = 'week'"
+          >
+            Week
+          </button>
+          <button
+            class="chart-tab"
+            :class="{ active: chartView === 'month' }"
+            @click="chartView = 'month'"
+          >
+            Month
+          </button>
+        </div>
+      </div>
+      <div class="chart-card">
+        <!-- Weekly Bar Chart -->
+        <div v-if="chartView === 'week'" class="weekly-chart">
+          <svg class="chart-svg" viewBox="0 0 300 120" preserveAspectRatio="none">
+            <!-- Grid lines -->
+            <line x1="0" y1="30" x2="300" y2="30" stroke="var(--border-color)" stroke-width="0.5" stroke-dasharray="2" opacity="0.5"/>
+            <line x1="0" y1="60" x2="300" y2="60" stroke="var(--border-color)" stroke-width="0.5" stroke-dasharray="2" opacity="0.5"/>
+            <line x1="0" y1="90" x2="300" y2="90" stroke="var(--border-color)" stroke-width="0.5" stroke-dasharray="2" opacity="0.5"/>
+            <!-- Bars -->
+            <rect
+              v-for="(value, i) in store.dailyMinutesLast7Days"
+              :key="i"
+              :x="i * 43"
+              :y="120 - (value / Math.max(...store.dailyMinutesLast7Days, 1) * 100)"
+              width="35"
+              :height="(value / Math.max(...store.dailyMinutesLast7Days, 1) * 100)"
+              fill="var(--accent-primary)"
+              rx="4"
+              opacity="0.8"
+            />
+          </svg>
+          <div class="chart-labels">
+            <span v-for="(value, i) in store.dailyMinutesLast7Days" :key="i" class="chart-label">
+              {{ value }}m
+            </span>
+          </div>
+        </div>
+        <!-- Monthly Sparkline -->
+        <div v-else class="monthly-chart">
+          <svg class="chart-svg" viewBox="0 0 300 80" preserveAspectRatio="none">
+            <!-- Grid lines -->
+            <line x1="0" y1="20" x2="300" y2="20" stroke="var(--border-color)" stroke-width="0.5" stroke-dasharray="2" opacity="0.5"/>
+            <line x1="0" y1="40" x2="300" y2="40" stroke="var(--border-color)" stroke-width="0.5" stroke-dasharray="2" opacity="0.5"/>
+            <line x1="0" y1="60" x2="300" y2="60" stroke="var(--border-color)" stroke-width="0.5" stroke-dasharray="2" opacity="0.5"/>
+            <!-- Sparkline -->
+            <polyline
+              :points="store.dailyMinutesLast30Days.map((v, i) => `${i * 10},${80 - (v / Math.max(...store.dailyMinutesLast30Days, 1) * 70)}`).join(' ')"
+              fill="none"
+              stroke="var(--accent-primary)"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <!-- Data points -->
+            <circle
+              v-for="(value, i) in store.dailyMinutesLast30Days"
+              v-if="value > 0"
+              :key="i"
+              :cx="i * 10"
+              :cy="80 - (value / Math.max(...store.dailyMinutesLast30Days, 1) * 70)"
+              r="2"
+              fill="var(--accent-primary)"
+            />
+          </svg>
+        </div>
+      </div>
+    </section>
+
     <!-- Stats Summary -->
     <section class="section stats-grid">
       <div class="stat-card">
@@ -105,6 +184,25 @@
           <span class="record-icon">🔥</span>
           <span class="record-value">{{ store.personalRecords.longestStreak }}</span>
           <span class="record-label">Longest Streak</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Achievements -->
+    <section class="section">
+      <label class="section-label">ACHIEVEMENTS</label>
+      <div class="achievements-scroll">
+        <div class="achievements-list">
+          <div
+            v-for="achievement in store.achievements"
+            :key="achievement.id"
+            class="achievement-badge"
+            :class="{ unlocked: achievement.unlocked }"
+            :title="achievement.description"
+          >
+            <span class="achievement-icon">{{ achievement.icon }}</span>
+            <span class="achievement-name">{{ achievement.name }}</span>
+          </div>
         </div>
       </div>
     </section>
@@ -1084,10 +1182,59 @@ Keep pushing! 💪🔥`
 }
 
 .record-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Achievements */
+.achievements-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.achievements-scroll::-webkit-scrollbar { display: none; }
+
+.achievements-list {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+.achievement-badge {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  min-width: 70px;
+  opacity: 0.4;
+  filter: grayscale(1);
+  transition: all 0.2s ease;
+}
+
+.achievement-badge.unlocked {
+  opacity: 1;
+  filter: grayscale(0);
+  border-color: var(--accent-primary);
+  background: var(--accent-glow);
+  box-shadow: 0 2px 8px rgba(88, 86, 214, 0.2);
+}
+
+.achievement-icon {
+  font-size: 24px;
+}
+
+.achievement-name {
   font-size: 10px;
   font-weight: 600;
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-align: center;
 }
-</style>
+
+/* Chart */
