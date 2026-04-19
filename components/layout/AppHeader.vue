@@ -64,11 +64,11 @@ import { useModeStore, type AppMode } from '~/stores/mode'
 const modeStore = useModeStore()
 
 const props = defineProps<{
-  activeTab: 'timer' | 'plans' | 'history'
+  activeTab: 'timer' | 'plans' | 'history' | 'ai'
 }>()
 
 const emit = defineEmits<{
-  'tab-change': [tab: 'timer' | 'plans' | 'history']
+  'tab-change': [tab: 'timer' | 'plans' | 'history' | 'ai']
   'mode-change': [mode: AppMode]
 }>()
 

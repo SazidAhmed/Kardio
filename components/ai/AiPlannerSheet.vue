@@ -18,6 +18,14 @@
             </p>
           </div>
 
+          <div v-if="isSubmitting" class="status-card">
+            <div class="status-spinner" aria-hidden="true"></div>
+            <div>
+              <p class="status-title">Generating your plans</p>
+              <p class="status-text">{{ loadingMessage }}</p>
+            </div>
+          </div>
+
           <div class="form-section">
             <label class="field-label">Photos</label>
             <input
@@ -25,6 +33,7 @@
               type="file"
               accept="image/png,image/jpeg,image/webp"
               multiple
+              :disabled="isSubmitting"
               @change="handleFiles"
             >
             <p class="field-help">Recommended: front, side, back. Max 3 images. Photos are resized locally before sending.</p>
@@ -39,11 +48,11 @@
           <div class="form-grid">
             <div class="form-group">
               <label class="field-label">Age</label>
-              <input v-model.number="profile.age" type="number" min="12" max="100" class="field-input">
+              <input v-model.number="profile.age" type="number" min="12" max="100" class="field-input" :disabled="isSubmitting">
             </div>
             <div class="form-group">
               <label class="field-label">Sex</label>
-              <select v-model="profile.sex" class="field-input">
+              <select v-model="profile.sex" class="field-input" :disabled="isSubmitting">
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="other">Other</option>
@@ -52,19 +61,19 @@
             </div>
             <div class="form-group">
               <label class="field-label">Height (cm)</label>
-              <input v-model.number="profile.heightCm" type="number" min="100" max="250" class="field-input">
+              <input v-model.number="profile.heightCm" type="number" min="100" max="250" class="field-input" :disabled="isSubmitting">
             </div>
             <div class="form-group">
               <label class="field-label">Weight (kg)</label>
-              <input v-model.number="profile.weightKg" type="number" min="30" max="300" class="field-input">
+              <input v-model.number="profile.weightKg" type="number" min="30" max="300" class="field-input" :disabled="isSubmitting">
             </div>
             <div class="form-group span-2">
               <label class="field-label">Goal</label>
-              <input v-model="profile.goal" type="text" class="field-input" placeholder="Fat loss, endurance, recomposition, strength">
+              <input v-model="profile.goal" type="text" class="field-input" placeholder="Fat loss, endurance, recomposition, strength" :disabled="isSubmitting">
             </div>
             <div class="form-group">
               <label class="field-label">Experience</label>
-              <select v-model="profile.experience" class="field-input">
+              <select v-model="profile.experience" class="field-input" :disabled="isSubmitting">
                 <option value="beginner">Beginner</option>
                 <option value="intermediate">Intermediate</option>
                 <option value="advanced">Advanced</option>
@@ -72,23 +81,39 @@
             </div>
             <div class="form-group">
               <label class="field-label">Days per week</label>
-              <input v-model.number="profile.daysPerWeek" type="number" min="1" max="7" class="field-input">
+              <input v-model.number="profile.daysPerWeek" type="number" min="1" max="7" class="field-input" :disabled="isSubmitting">
             </div>
             <div class="form-group span-2">
               <label class="field-label">Equipment</label>
-              <textarea v-model="profile.equipment" class="field-input textarea-input" rows="2" placeholder="Gym access, dumbbells, treadmill, bodyweight only"></textarea>
+              <textarea v-model="profile.equipment" class="field-input textarea-input" rows="2" placeholder="Gym access, dumbbells, treadmill, bodyweight only" :disabled="isSubmitting"></textarea>
             </div>
             <div class="form-group span-2">
               <label class="field-label">Injuries or limits</label>
-              <textarea v-model="profile.injuries" class="field-input textarea-input" rows="2" placeholder="Knee pain, lower back sensitivity, none"></textarea>
+              <textarea v-model="profile.injuries" class="field-input textarea-input" rows="2" placeholder="Knee pain, lower back sensitivity, none" :disabled="isSubmitting"></textarea>
             </div>
           </div>
 
-          <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+          <div v-if="errorMessage" class="error-card">
+            <p class="error-title">Generation failed</p>
+            <p class="error-text">{{ errorMessage }}</p>
+            <button
+              v-if="canRetry"
+              class="ghost-btn"
+              :disabled="isSubmitting"
+              @click="generatePlans"
+            >
+              Try Again
+            </button>
+          </div>
 
-          <button class="primary-btn" :disabled="isSubmitting" @click="generatePlans">
-            {{ isSubmitting ? 'Generating...' : 'Generate AI Plans' }}
-          </button>
+          <div class="form-actions">
+            <button class="primary-btn" :disabled="isSubmitting" @click="generatePlans">
+              {{ isSubmitting ? 'Generating...' : 'Generate AI Plans' }}
+            </button>
+            <button v-if="canRetry" class="secondary-btn" :disabled="isSubmitting" @click="generatePlans">
+              Retry Last Request
+            </button>
+          </div>
         </div>
 
         <div v-else class="result-view">
@@ -179,9 +204,10 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useWorkoutStore } from '~/stores/workout'
 import { useLiftStore } from '~/stores/lift'
+import { useAiStore } from '~/stores/ai'
 import type { AiPlannerImage, AiPlannerProfile, AiPlannerResponse } from '~/types/ai'
 
 const props = defineProps<{
@@ -194,6 +220,7 @@ const emit = defineEmits<{
 
 const workoutStore = useWorkoutStore()
 const liftStore = useLiftStore()
+const aiStore = useAiStore()
 
 const defaultProfile = (): AiPlannerProfile => ({
   age: 25,
@@ -216,6 +243,9 @@ const errorMessage = ref('')
 const saveMessage = ref('')
 const cardioSaved = ref(false)
 const liftSaved = ref(false)
+const loadingMessage = ref('Preparing photos and generating a conservative cardio and lifting draft.')
+const canRetry = computed(() => uploads.value.length > 0 && !result.value)
+const latestRecordId = ref('')
 
 watch(() => props.open, (isOpen) => {
   if (!isOpen) {
@@ -242,7 +272,27 @@ function resetPlanner() {
   saveMessage.value = ''
   cardioSaved.value = false
   liftSaved.value = false
+  loadingMessage.value = 'Preparing photos and generating a conservative cardio and lifting draft.'
+  latestRecordId.value = ''
   Object.assign(profile, defaultProfile())
+}
+
+function getErrorMessage(error: unknown) {
+  if (isRecord(error)) {
+    if (typeof error.statusMessage === 'string' && error.statusMessage.trim()) {
+      return error.statusMessage
+    }
+
+    if (isRecord(error.data) && typeof error.data.statusMessage === 'string' && error.data.statusMessage.trim()) {
+      return error.data.statusMessage
+    }
+  }
+
+  return error instanceof Error ? error.message : 'Failed to generate plans.'
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 async function fileToBase64(file: File) {
@@ -298,18 +348,34 @@ async function resizeImage(file: File) {
 async function handleFiles(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files || []).slice(0, 3)
-  const preparedFiles = await Promise.all(files.map((file) => resizeImage(file)))
 
-  cleanupPreviews()
-  photoPreviews.value = preparedFiles.map((file) => ({
-    name: file.name,
-    url: URL.createObjectURL(file),
-  }))
-  uploads.value = await Promise.all(preparedFiles.map(async (file) => ({
-    mimeType: file.type || 'image/jpeg',
-    data: await fileToBase64(file),
-  })))
-  errorMessage.value = ''
+  if (files.length === 0) {
+    uploads.value = []
+    cleanupPreviews()
+    photoPreviews.value = []
+    return
+  }
+
+  try {
+    const preparedFiles = await Promise.all(files.map((file) => resizeImage(file)))
+
+    cleanupPreviews()
+    photoPreviews.value = preparedFiles.map((file) => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+    }))
+    uploads.value = await Promise.all(preparedFiles.map(async (file) => ({
+      mimeType: file.type || 'image/jpeg',
+      data: await fileToBase64(file),
+    })))
+    errorMessage.value = ''
+  } catch (error: unknown) {
+    errorMessage.value = getErrorMessage(error)
+    uploads.value = []
+    cleanupPreviews()
+    photoPreviews.value = []
+    input.value = ''
+  }
 }
 
 function validateForm() {
@@ -337,7 +403,12 @@ async function generatePlans() {
   }
 
   isSubmitting.value = true
+  loadingMessage.value = uploads.value.length > 1
+    ? 'Photos are ready. Gemini is comparing your images with your workout history now.'
+    : 'Photo is ready. Gemini is generating a conservative cardio and lifting draft now.'
+
   try {
+    result.value = null
     result.value = await $fetch<AiPlannerResponse>('/api/ai/generate-routines', {
       method: 'POST',
       body: {
@@ -362,8 +433,13 @@ async function generatePlans() {
     })
     cardioSaved.value = false
     liftSaved.value = false
+    latestRecordId.value = aiStore.recordGeneration({
+      profile: { ...profile },
+      result: result.value,
+    })
+    errorMessage.value = ''
   } catch (error: unknown) {
-    errorMessage.value = error instanceof Error ? error.message : 'Failed to generate plans.'
+    errorMessage.value = getErrorMessage(error)
   } finally {
     isSubmitting.value = false
   }
@@ -392,6 +468,9 @@ function saveCardioPlan() {
 
   workoutStore.selectPlan(planId)
   cardioSaved.value = true
+  if (latestRecordId.value) {
+    aiStore.markPlanSaved(latestRecordId.value, 'cardio')
+  }
   saveMessage.value = 'Cardio plan saved to My Workout Plans.'
 }
 
@@ -417,6 +496,9 @@ function saveLiftPlan() {
 
   liftStore.selectPlan(planId)
   liftSaved.value = true
+  if (latestRecordId.value) {
+    aiStore.markPlanSaved(latestRecordId.value, 'lift')
+  }
   saveMessage.value = cardioSaved.value
     ? 'Cardio and lift plans saved.'
     : 'Lift plan saved to Select Routine.'
@@ -505,12 +587,49 @@ function saveBothPlans() {
 }
 
 .notice-card,
+.status-card,
+.error-card,
 .analysis-card,
 .plan-card {
   padding: 16px;
   background: var(--bg-primary);
   border-radius: 18px;
   border: 1px solid var(--border-color);
+}
+
+.status-card,
+.error-card,
+.form-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.status-card {
+  align-items: center;
+}
+
+.status-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent-primary) 18%, transparent);
+  border-top-color: var(--accent-primary);
+  animation: spin 0.85s linear infinite;
+  flex-shrink: 0;
+}
+
+.status-title,
+.error-title {
+  margin: 0 0 4px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.status-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .notice-title {
@@ -633,6 +752,11 @@ function saveBothPlans() {
   border: 1.5px solid var(--border-color);
 }
 
+.error-card,
+.form-actions {
+  flex-wrap: wrap;
+}
+
 .error-text,
 .save-text {
   margin: 0;
@@ -735,6 +859,12 @@ function saveBothPlans() {
   background: var(--bg-card);
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 420px) {
   .form-grid {
     grid-template-columns: 1fr;
@@ -750,6 +880,9 @@ function saveBothPlans() {
 
   .analysis-head,
   .plan-card-head,
+  .status-card,
+  .error-card,
+  .form-actions,
   .result-actions {
     flex-direction: column;
     align-items: flex-start;

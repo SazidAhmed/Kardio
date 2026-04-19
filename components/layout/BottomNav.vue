@@ -1,6 +1,6 @@
 <template>
   <nav class="bottom-nav">
-    <div class="nav-content" :class="{ 'two-items': currentMode === 'lifting' }">
+    <div class="nav-content">
       <!-- Timer Tab - Only for Cardio mode -->
       <button
         v-if="currentMode === 'cardio'"
@@ -34,6 +34,20 @@
         <span class="nav-label">Plans</span>
       </button>
 
+      <button
+        class="nav-item"
+        :class="{ active: activeTab === 'ai' }"
+        @click="$emit('tab-change', 'ai')"
+      >
+        <div class="nav-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="2"/>
+            <path d="M9 9h.01M15 9h.01M8 14c1.2 1 2.56 1.5 4 1.5S14.8 15 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="nav-label">AI</span>
+      </button>
+
       <!-- History Tab - Available in both modes -->
       <button
         class="nav-item"
@@ -59,12 +73,12 @@ import { computed } from 'vue'
 import { useModeStore, type AppMode } from '~/stores/mode'
 
 const props = defineProps<{
-  activeTab: 'timer' | 'plans' | 'history'
+  activeTab: 'timer' | 'plans' | 'history' | 'ai'
   mode: AppMode
 }>()
 
 const emit = defineEmits<{
-  'tab-change': [tab: 'timer' | 'plans' | 'history']
+  'tab-change': [tab: 'timer' | 'plans' | 'history' | 'ai']
 }>()
 
 const currentMode = computed(() => props.mode)
@@ -90,16 +104,6 @@ const currentMode = computed(() => props.mode)
   width: 100%;
   max-width: 480px;
   padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-}
-
-.nav-content.two-items {
-  justify-content: center;
-  gap: 24px;
-}
-
-.nav-content.two-items .nav-item {
-  flex: 0 0 auto;
-  min-width: 80px;
 }
 
 .nav-item {

@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 
 export type AppMode = 'cardio' | 'lifting'
-export type CardioTab = 'timer' | 'plans' | 'history'
-export type LiftingTab = 'plans' | 'history'
+export type CardioTab = 'timer' | 'plans' | 'history' | 'ai'
+export type LiftingTab = 'plans' | 'history' | 'ai'
 
 const MODE_STORAGE_KEY = 'kardio-mode'
 const CARDIO_TAB_STORAGE_KEY = 'kardio-cardio-tab'
@@ -73,12 +73,12 @@ export const useModeStore = defineStore('mode', {
         }
 
         const cardioTabStored = localStorage.getItem(CARDIO_TAB_STORAGE_KEY)
-        if (cardioTabStored === 'timer' || cardioTabStored === 'plans' || cardioTabStored === 'history') {
+        if (cardioTabStored === 'timer' || cardioTabStored === 'plans' || cardioTabStored === 'history' || cardioTabStored === 'ai') {
           this.cardioTab = cardioTabStored
         }
 
         const liftingTabStored = localStorage.getItem(LIFTING_TAB_STORAGE_KEY)
-        if (liftingTabStored === 'plans' || liftingTabStored === 'history') {
+        if (liftingTabStored === 'plans' || liftingTabStored === 'history' || liftingTabStored === 'ai') {
           this.liftingTab = liftingTabStored
         }
       }

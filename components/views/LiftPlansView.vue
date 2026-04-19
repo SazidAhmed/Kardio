@@ -7,7 +7,6 @@
         <div class="section-header">
           <label class="section-label">SELECT ROUTINE</label>
           <div class="section-actions">
-            <button class="btn-ai" @click="showAiPlanner = true">AI Plan</button>
             <button class="btn-manage" @click="showEditor = true; editingPlan = null; resetForm()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -16,14 +15,6 @@
             </button>
           </div>
         </div>
-        <button class="ai-banner" @click="showAiPlanner = true">
-          <div>
-            <span class="ai-banner-label">Body Photo Planner</span>
-            <h3>Generate AI cardio and lifting routines together</h3>
-            <p>Use Gemini to create draft plans from your photos, goal, equipment, and training level.</p>
-          </div>
-          <span class="ai-banner-cta">Open</span>
-        </button>
         <div class="preset-scroll">
           <div class="preset-list">
             <button
@@ -350,7 +341,6 @@
       </div>
     </div>
 
-    <AiPlannerSheet :open="showAiPlanner" @close="showAiPlanner = false" />
   </div>
 </template>
 
@@ -576,69 +566,6 @@ async function startWorkout() {
 
 .btn-manage:hover {
   background: var(--accent-glow);
-}
-
-.btn-ai {
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  border: 1.5px solid var(--accent-primary);
-  background: transparent;
-  color: var(--accent-primary);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.ai-banner {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
-  padding: 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(88, 86, 214, 0.18);
-  background:
-    radial-gradient(circle at top left, rgba(52, 199, 89, 0.18), transparent 48%),
-    linear-gradient(135deg, rgba(88, 86, 214, 0.12), rgba(255, 149, 0, 0.08));
-  text-align: left;
-  cursor: pointer;
-}
-
-.ai-banner-label {
-  display: inline-block;
-  margin-bottom: 8px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(88, 86, 214, 0.16);
-  color: var(--accent-primary);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-}
-
-.ai-banner h3 {
-  margin: 0;
-  font-size: 15px;
-  color: var(--text-primary);
-}
-
-.ai-banner p {
-  margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--text-secondary);
-}
-
-.ai-banner-cta {
-  padding: 9px 14px;
-  border-radius: 999px;
-  background: var(--accent-primary);
-  color: white;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 /* Preset Cards */
