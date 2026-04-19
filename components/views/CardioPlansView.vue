@@ -4,14 +4,30 @@
     <section class="section">
       <div class="plans-header">
         <h2 class="section-title">My Workout Plans</h2>
-        <button class="btn-add" @click="startCreatePlan">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19" stroke-linecap="round"/>
-            <line x1="5" y1="12" x2="19" y2="12" stroke-linecap="round"/>
-          </svg>
-          New Plan
-        </button>
+        <div class="header-actions">
+          <button class="btn-ai" @click="showAiPlanner = true">
+            AI Plan
+          </button>
+          <button class="btn-add" @click="startCreatePlan">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19" stroke-linecap="round"/>
+              <line x1="5" y1="12" x2="19" y2="12" stroke-linecap="round"/>
+            </svg>
+            New Plan
+          </button>
+        </div>
       </div>
+    </section>
+
+    <section class="section">
+      <button class="ai-banner" @click="showAiPlanner = true">
+        <div>
+          <span class="ai-banner-label">New</span>
+          <h3>Generate a cardio and lifting plan from body photos</h3>
+          <p>Upload up to 3 images, add your goal and equipment, then review the AI plan before saving.</p>
+        </div>
+        <span class="ai-banner-cta">Open</span>
+      </button>
     </section>
 
     <!-- Plans List -->
@@ -289,6 +305,8 @@
         </div>
       </div>
     </div>
+
+    <AiPlannerSheet :open="showAiPlanner" @close="showAiPlanner = false" />
   </div>
 </template>
 
@@ -306,6 +324,7 @@ const showEditor = ref(false)
 const editingPlan = ref<WorkoutPlan | null>(null)
 const showDeleteConfirm = ref(false)
 const planToDelete = ref<WorkoutPlan | null>(null)
+const showAiPlanner = ref(false)
 
 // Available icons
 const availableIcons = ['🌱', '🔥', '⚡', '💪', '🏃', '🚴', '🏊', '🧘', '⭐', '💎', '🎯', '🚀']
@@ -529,11 +548,28 @@ function duplicatePlan(planId: string) {
   justify-content: space-between;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .section-title {
   font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+}
+
+.btn-ai {
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--accent-primary);
+  background: transparent;
+  color: var(--accent-primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .btn-add {
@@ -554,6 +590,57 @@ function duplicatePlan(planId: string) {
 .btn-add:hover {
   background: var(--accent-secondary);
   transform: translateY(-1px);
+}
+
+.ai-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(88, 86, 214, 0.18);
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(circle at top left, rgba(88, 86, 214, 0.2), transparent 52%),
+    linear-gradient(135deg, rgba(255, 149, 0, 0.08), rgba(88, 86, 214, 0.12));
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-banner-label {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(88, 86, 214, 0.16);
+  color: var(--accent-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.ai-banner h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.ai-banner p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.ai-banner-cta {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 /* Empty State */
