@@ -8,7 +8,6 @@ npm install @google/genai
 
 Example server route in **server/api/ai/analyze-body.post.ts**:
 
-
 import { GoogleGenAI } from '@google/genai'
 
 export default defineEventHandler(async (event) => {
@@ -40,7 +39,6 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-
 If you want no SDK, REST is also fine:
 
 await $fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
@@ -58,8 +56,23 @@ await $fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5
   },
 })
 
-
 Recommendation:
 
 * Use **@google/genai** if you want easier integration and cleaner code.
 * Use raw REST if you want zero dependency and full control.
+
+
+Two important points:
+
+* The value shown as **...-UzU** is only a masked preview, not the full key.
+* Treat the full key as secret. Do not paste it into chat, screenshots, frontend code, or commit it to git.
+
+For your Nuxt app, put the full key in an **.env** file like:
+
+GEMINI_API_KEY=your_actual_full_key_here
+
+Then access it only from server code, for example in a Nuxt server route:
+
+const apiKey = process.env.GEMINI_API_KEY
+
+Do not expose it through **runtimeConfig.public**.
