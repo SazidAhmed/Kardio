@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type { AiPlannerProfile, AiPlannerResponse } from '~/types/ai'
 
-const AI_HISTORY_KEY = 'kardio-ai-history'
+const AI_HISTORY_KEY = 'fitz-ai-history'
 const AI_HISTORY_LIMIT = 20
 
 export interface AiGenerationRecord {

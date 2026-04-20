@@ -55,7 +55,7 @@
       <!-- PWA Install Banner -->
       <div v-if="pwa.showInstallPrompt.value && !pwa.isInstalled.value" class="install-banner">
         <span class="install-icon">📲</span>
-        <span class="install-text">Install Kardio for quick access</span>
+        <span class="install-text">Install Fit-Z for quick access</span>
         <button class="install-btn" @click="pwa.installApp">Install</button>
         <button class="install-dismiss" @click="pwa.showInstallPrompt.value = false">×</button>
       </div>

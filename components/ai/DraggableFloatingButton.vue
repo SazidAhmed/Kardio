@@ -48,7 +48,7 @@ const dragOffset = ref({ x: 0, y: 0 })
 
 // Load saved position or default to bottom-right
 onMounted(() => {
-  const saved = localStorage.getItem('kardio-fab-position')
+  const saved = localStorage.getItem('fitz-fab-position')
   if (saved) {
     position.value = JSON.parse(saved)
   } else {
@@ -148,7 +148,7 @@ function stopDrag() {
   }
 
   // Save position
-  localStorage.setItem('kardio-fab-position', JSON.stringify(position.value))
+  localStorage.setItem('fitz-fab-position', JSON.stringify(position.value))
 }
 
 function removeListeners() {

@@ -7,7 +7,7 @@
             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="#ff3b5c" stroke="#ff3b5c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h1 class="logo-text">Kardio</h1>
+        <h1 class="logo-text">Fit-Z</h1>
       </div>
       <div class="header-actions">
         <!-- Mode Switcher -->
@@ -79,7 +79,7 @@ const currentMode = computed(() => modeStore.currentMode)
 function toggleDarkMode() {
   isDarkMode.value = !isDarkMode.value
   document.documentElement.classList.toggle('dark-mode', isDarkMode.value)
-  localStorage.setItem('cardioflow-dark-mode', isDarkMode.value.toString())
+  localStorage.setItem('fitz-dark-mode', isDarkMode.value.toString())
 }
 
 function setMode(mode: AppMode) {
@@ -88,7 +88,7 @@ function setMode(mode: AppMode) {
 }
 
 onMounted(() => {
-  const stored = localStorage.getItem('cardioflow-dark-mode')
+  const stored = localStorage.getItem('fitz-dark-mode')
   if (stored === 'true') {
     isDarkMode.value = true
     document.documentElement.classList.add('dark-mode')

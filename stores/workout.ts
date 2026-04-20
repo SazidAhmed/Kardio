@@ -60,9 +60,9 @@ export interface Achievement {
 
 export type TimerPhase = 'idle' | 'warmup' | 'exercise' | 'rest' | 'cooldown' | 'finished'
 
-const STORAGE_KEY = 'cardioflow-history'
-const PLANS_STORAGE_KEY = 'cardioflow-plans'
-const ACHIEVEMENTS_STORAGE_KEY = 'cardioflow-achievements'
+const STORAGE_KEY = 'fitz-history'
+const PLANS_STORAGE_KEY = 'fitz-plans'
+const ACHIEVEMENTS_STORAGE_KEY = 'fitz-achievements'
 
 // Store interval outside of Pinia state to avoid SSR serialization issues
 let timerInterval: ReturnType<typeof setInterval> | null = null

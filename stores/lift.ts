@@ -12,8 +12,8 @@ function getAudioFeedback() {
   return audioFeedback
 }
 
-const LIFT_PLANS_KEY = 'kardio-lift-plans'
-const LIFT_HISTORY_KEY = 'kardio-lift-history'
+const LIFT_PLANS_KEY = 'fitz-lift-plans'
+const LIFT_HISTORY_KEY = 'fitz-lift-history'
 
 export interface LiftSet {
   reps: number
