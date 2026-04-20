@@ -22,7 +22,7 @@ export function useReminder() {
 
   function loadSettings() {
     if (typeof localStorage === 'undefined') return
-    const stored = localStorage.getItem('cardioflow-reminder')
+    const stored = localStorage.getItem('fitz-reminder')
     if (stored) {
       try {
         const settings = JSON.parse(stored)
@@ -36,7 +36,7 @@ export function useReminder() {
 
   function saveSettings() {
     if (typeof localStorage === 'undefined') return
-    localStorage.setItem('cardioflow-reminder', JSON.stringify({
+    localStorage.setItem('fitz-reminder', JSON.stringify({
       enabled: reminderEnabled.value,
       time: reminderTime.value,
     }))
@@ -56,13 +56,13 @@ export function useReminder() {
       const store = useWorkoutStore()
       const streak = store.streak
 
-      new Notification('Kardio Workout Reminder', {
+      new Notification('Fit-Z Workout Reminder', {
         body: streak > 0
           ? `Keep your ${streak}-day streak going! Time to work out 💪`
           : 'Time for your workout! Let\'s get moving 🏃',
         icon: '/icon-192.png',
         badge: '/icon-192.png',
-        tag: 'kardio-reminder',
+        tag: 'fitz-reminder',
       })
     })
   }

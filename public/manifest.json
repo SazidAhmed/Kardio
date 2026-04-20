@@ -1,6 +1,6 @@
 {
-  "name": "Kardio - Cardio Interval Trainer",
-  "short_name": "Kardio",
+  "name": "Fit-Z - Fitness & Cardio Trainer",
+  "short_name": "Fit-Z",
   "description": "A beautiful cardio interval training timer app to track your workouts and sessions.",
   "start_url": "/",
   "display": "standalone",

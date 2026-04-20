@@ -547,7 +547,7 @@ function exportCSV() {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `kardio-workouts-${new Date().toISOString().split('T')[0]}.csv`
+  link.download = `fitz-workouts-${new Date().toISOString().split('T')[0]}.csv`
   link.click()
   URL.revokeObjectURL(link.href)
 }
@@ -562,7 +562,7 @@ async function shareWorkout() {
   // Find the plan to get exercise details
   const plan = store.plans.find(p => p.name === latest?.name)
 
-  const summaryText = `🏃‍♂️ Kardio Workout Summary
+  const summaryText = `🏃‍♂️ Fit-Z Workout Summary
 📅 ${latest ? new Date(latest.date).toLocaleDateString() : new Date().toLocaleDateString()}
 
 📊 Stats:
@@ -582,7 +582,7 @@ Keep pushing! 💪🔥`
   if (navigator.share) {
     try {
       await navigator.share({
-        title: 'My Kardio Workout Summary',
+        title: 'My Fit-Z Workout Summary',
         text: summaryText,
       })
       return

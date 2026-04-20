@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kardio-v1'
+const CACHE_NAME = 'fitz-v1'
 const ASSETS = [
   '/',
   '/manifest.json',

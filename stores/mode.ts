@@ -4,9 +4,9 @@ export type AppMode = 'cardio' | 'lifting'
 export type CardioTab = 'timer' | 'plans' | 'history' | 'ai'
 export type LiftingTab = 'plans' | 'history' | 'ai'
 
-const MODE_STORAGE_KEY = 'kardio-mode'
-const CARDIO_TAB_STORAGE_KEY = 'kardio-cardio-tab'
-const LIFTING_TAB_STORAGE_KEY = 'kardio-lifting-tab'
+const MODE_STORAGE_KEY = 'fitz-mode'
+const CARDIO_TAB_STORAGE_KEY = 'fitz-cardio-tab'
+const LIFTING_TAB_STORAGE_KEY = 'fitz-lifting-tab'
 
 export const useModeStore = defineStore('mode', {
   state: () => ({

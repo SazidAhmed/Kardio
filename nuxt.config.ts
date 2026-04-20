@@ -15,14 +15,14 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   app: {
     head: {
-      title: 'Kardio - Cardio Interval Trainer',
+      title: 'Fit-Z - Fitness & Cardio Trainer',
       meta: [
         { name: 'description', content: 'A beautiful cardio interval training timer app to track your workouts and sessions.' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1' },
         { name: 'theme-color', content: '#5856d6' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-        { name: 'apple-mobile-web-app-title', content: 'Kardio' },
+        { name: 'apple-mobile-web-app-title', content: 'Fit-Z' },
       ],
       link: [
         { rel: 'manifest', href: '/manifest.json' },
