@@ -34,20 +34,6 @@
         <span class="nav-label">Plans</span>
       </button>
 
-      <button
-        class="nav-item"
-        :class="{ active: activeTab === 'ai' }"
-        @click="$emit('tab-change', 'ai')"
-      >
-        <div class="nav-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="2"/>
-            <path d="M9 9h.01M15 9h.01M8 14c1.2 1 2.56 1.5 4 1.5S14.8 15 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <span class="nav-label">AI</span>
-      </button>
-
       <!-- History Tab - Available in both modes -->
       <button
         class="nav-item"
