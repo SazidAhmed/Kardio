@@ -6,12 +6,14 @@
       <section class="section">
         <div class="section-header">
           <label class="section-label">SELECT ROUTINE</label>
-          <button class="btn-manage" @click="showEditor = true; editingPlan = null; resetForm()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            New
-          </button>
+          <div class="section-actions">
+            <button class="btn-manage" @click="showEditor = true; editingPlan = null; resetForm()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              New
+            </button>
+          </div>
         </div>
         <div class="preset-scroll">
           <div class="preset-list">
@@ -338,6 +340,7 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -354,6 +357,7 @@ const showEditor = ref(false)
 const editingPlan = ref<LiftPlan | null>(null)
 const showDeleteConfirm = ref(false)
 const planToDelete = ref<LiftPlan | null>(null)
+const showAiPlanner = ref(false)
 
 const availableIcons = ['💪', '🏋️', '🦵', '🔥', '⚡', '🏃', '🚴', '⭐', '💎', '🎯', '🚀', '🧱']
 
@@ -528,6 +532,12 @@ async function startWorkout() {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .section-label {

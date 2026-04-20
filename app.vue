@@ -29,6 +29,10 @@
             v-else-if="activeTab === 'history'"
             key="cardio-history-view"
           />
+          <ViewsAiHubView
+            v-else-if="activeTab === 'ai'"
+            key="cardio-ai-view"
+          />
         </template>
 
         <!-- Lifting Mode Views -->
@@ -40,6 +44,10 @@
           <ViewsLiftHistoryView
             v-else-if="activeTab === 'history'"
             key="lift-history-view"
+          />
+          <ViewsAiHubView
+            v-else-if="activeTab === 'ai'"
+            key="lift-ai-view"
           />
         </template>
       </main>
@@ -58,6 +66,12 @@
         :mode="modeStore.currentMode"
         @tab-change="handleTabChange"
       />
+
+      <!-- Draggable Floating AI Button -->
+      <AiDraggableFloatingButton
+        :is-open="activeTab === 'ai'"
+        @click="handleAiButtonClick"
+      />
     </div>
   </div>
 </template>
@@ -65,10 +79,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useWorkoutStore } from '~/stores/workout'
+import { useAiStore } from '~/stores/ai'
 import { useModeStore, type AppMode, type CardioTab, type LiftingTab } from '~/stores/mode'
 import { usePWA } from '~/composables/usePWA'
 
 const store = useWorkoutStore()
+const aiStore = useAiStore()
 const modeStore = useModeStore()
 const pwa = usePWA()
 
@@ -77,6 +93,20 @@ const activeTab = computed(() => modeStore.activeTab)
 
 function handleTabChange(tab: CardioTab | LiftingTab) {
   modeStore.switchTab(tab)
+}
+
+function handleAiButtonClick() {
+  if (activeTab.value === 'ai') {
+    // Go back to main view based on mode
+    if (modeStore.isCardioMode) {
+      modeStore.switchTab('timer')
+    } else {
+      modeStore.switchTab('plans')
+    }
+  } else {
+    // Open AI tab
+    modeStore.switchTab('ai')
+  }
 }
 
 function handleModeChange(mode: AppMode) {
@@ -94,6 +124,7 @@ function handlePlanSelected() {
 onMounted(async () => {
   // Load mode from storage
   modeStore.loadMode()
+  aiStore.loadHistory()
 
   // Load cardio store data
   store.loadHistory()

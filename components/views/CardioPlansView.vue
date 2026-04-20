@@ -4,13 +4,15 @@
     <section class="section">
       <div class="plans-header">
         <h2 class="section-title">My Workout Plans</h2>
-        <button class="btn-add" @click="startCreatePlan">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19" stroke-linecap="round"/>
-            <line x1="5" y1="12" x2="19" y2="12" stroke-linecap="round"/>
-          </svg>
-          New Plan
-        </button>
+        <div class="header-actions">
+          <button class="btn-add" @click="startCreatePlan">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19" stroke-linecap="round"/>
+              <line x1="5" y1="12" x2="19" y2="12" stroke-linecap="round"/>
+            </svg>
+            New Plan
+          </button>
+        </div>
       </div>
     </section>
 
@@ -289,6 +291,7 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -306,7 +309,6 @@ const showEditor = ref(false)
 const editingPlan = ref<WorkoutPlan | null>(null)
 const showDeleteConfirm = ref(false)
 const planToDelete = ref<WorkoutPlan | null>(null)
-
 // Available icons
 const availableIcons = ['🌱', '🔥', '⚡', '💪', '🏃', '🚴', '🏊', '🧘', '⭐', '💎', '🎯', '🚀']
 
@@ -527,6 +529,12 @@ function duplicatePlan(planId: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .section-title {

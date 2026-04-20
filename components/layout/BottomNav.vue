@@ -1,6 +1,6 @@
 <template>
   <nav class="bottom-nav">
-    <div class="nav-content" :class="{ 'two-items': currentMode === 'lifting' }">
+    <div class="nav-content">
       <!-- Timer Tab - Only for Cardio mode -->
       <button
         v-if="currentMode === 'cardio'"
@@ -59,12 +59,12 @@ import { computed } from 'vue'
 import { useModeStore, type AppMode } from '~/stores/mode'
 
 const props = defineProps<{
-  activeTab: 'timer' | 'plans' | 'history'
+  activeTab: 'timer' | 'plans' | 'history' | 'ai'
   mode: AppMode
 }>()
 
 const emit = defineEmits<{
-  'tab-change': [tab: 'timer' | 'plans' | 'history']
+  'tab-change': [tab: 'timer' | 'plans' | 'history' | 'ai']
 }>()
 
 const currentMode = computed(() => props.mode)
@@ -90,16 +90,6 @@ const currentMode = computed(() => props.mode)
   width: 100%;
   max-width: 480px;
   padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-}
-
-.nav-content.two-items {
-  justify-content: center;
-  gap: 24px;
-}
-
-.nav-content.two-items .nav-item {
-  flex: 0 0 auto;
-  min-width: 80px;
 }
 
 .nav-item {

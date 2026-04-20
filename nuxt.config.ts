@@ -2,6 +2,12 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-04-03',
   devtools: { enabled: false },
   ssr: false, // Disable SSR for client-side only app
+  experimental: {
+    appManifest: false,
+  },
+  runtimeConfig: {
+    geminiApiKey: process.env.GEMINI_API_KEY,
+  },
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
