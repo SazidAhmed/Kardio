@@ -66,6 +66,12 @@
         :mode="modeStore.currentMode"
         @tab-change="handleTabChange"
       />
+
+      <!-- Draggable Floating AI Button -->
+      <AiDraggableFloatingButton
+        :is-open="activeTab === 'ai'"
+        @click="handleAiButtonClick"
+      />
     </div>
   </div>
 </template>
@@ -87,6 +93,20 @@ const activeTab = computed(() => modeStore.activeTab)
 
 function handleTabChange(tab: CardioTab | LiftingTab) {
   modeStore.switchTab(tab)
+}
+
+function handleAiButtonClick() {
+  if (activeTab.value === 'ai') {
+    // Go back to main view based on mode
+    if (modeStore.isCardioMode) {
+      modeStore.switchTab('timer')
+    } else {
+      modeStore.switchTab('plans')
+    }
+  } else {
+    // Open AI tab
+    modeStore.switchTab('ai')
+  }
 }
 
 function handleModeChange(mode: AppMode) {

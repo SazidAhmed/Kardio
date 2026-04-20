@@ -25,6 +25,14 @@ export const useModeStore = defineStore('mode', {
 
   actions: {
     setMode(mode: AppMode) {
+      // Reset target mode's tab to default (exit AI if active)
+      if (mode === 'cardio') {
+        this.cardioTab = 'timer'
+        this.saveCardioTab()
+      } else {
+        this.liftingTab = 'plans'
+        this.saveLiftingTab()
+      }
       this.currentMode = mode
       this.saveMode()
     },
