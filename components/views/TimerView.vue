@@ -19,12 +19,9 @@
             Plan
           </button>
         </div>
-        <button class="btn-manage" @click="emit('switch-tab', 'plans')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-          Manage
+        <button class="btn-mute-header" @click.stop="toggleMute" :title="isMuted ? 'Unmute' : 'Mute'">
+          <svg v-if="isMuted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
         </button>
       </div>
       <div v-if="activeTab === 'plan'" class="preset-scroll">
@@ -172,10 +169,6 @@
 
     <!-- Circular Timer (Timer Tab Only) -->
     <section v-if="activeTab === 'timer'" class="section timer-section">
-      <button class="btn-mute" @click.stop="toggleMute" :title="isMuted ? 'Unmute' : 'Mute'">
-        <svg v-if="isMuted" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
-        <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-      </button>
       <div v-if="wakeLockActive" class="wake-lock-indicator" title="Screen wake lock active">
         🔆
       </div>
@@ -554,25 +547,6 @@ const dashOffset = computed(() => {
   letter-spacing: 1px;
 }
 
-.btn-manage {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  border: none;
-  background: var(--bg-card);
-  color: var(--accent-primary);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-manage:hover {
-  background: var(--accent-glow);
-}
-
 /* Preset Cards */
 .preset-scroll {
   overflow-x: auto;
@@ -895,6 +869,28 @@ const dashOffset = computed(() => {
 }
 
 .btn-mute:hover {
+  background: var(--bg-primary);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* Mute Button in Header */
+.btn-mute-header {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.btn-mute-header:hover {
   background: var(--bg-primary);
   border-color: var(--accent-primary);
   color: var(--accent-primary);
