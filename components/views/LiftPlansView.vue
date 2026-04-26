@@ -41,8 +41,21 @@
       <section v-if="selectedPlan" class="section">
         <label class="section-label">EXERCISES</label>
         <div class="exercises-list">
-          <div v-for="(exercise, index) in selectedPlan.exercises" :key="exercise.id" class="exercise-row">
+          <div
+            v-for="(exercise, index) in selectedPlan.exercises"
+            :key="exercise.id"
+            class="exercise-row"
+            :class="{ 'drag-over': previewDragOverIndex === index }"
+            draggable="true"
+            @dragstart="onPreviewDragStart($event, Number(index))"
+            @dragover="onPreviewDragOver($event, Number(index))"
+            @dragleave="onPreviewDragLeave"
+            @drop="onPreviewDrop($event, Number(index))"
+          >
             <div class="exercise-info">
+              <span class="drag-handle-inline" title="Drag to reorder">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+              </span>
               <span class="exercise-index">{{ index + 1 }}</span>
               <span class="exercise-name">{{ exercise.name }}</span>
             </div>
@@ -257,8 +270,21 @@
           <div class="form-group">
             <label class="form-label">Exercises</label>
             <div class="editor-exercises">
-              <div v-for="(exercise, eIndex) in planForm.exercises" :key="eIndex" class="editor-exercise">
+              <div
+                v-for="(exercise, eIndex) in planForm.exercises"
+                :key="exercise.id || eIndex"
+                class="editor-exercise"
+                :class="{ 'drag-over': dragOverIndex === eIndex }"
+                draggable="true"
+                @dragstart="onExerciseDragStart($event, Number(eIndex))"
+                @dragover="onExerciseDragOver($event, Number(eIndex))"
+                @dragleave="onExerciseDragLeave"
+                @drop="onExerciseDrop($event, Number(eIndex))"
+              >
                 <div class="editor-exercise-header">
+                  <span class="drag-handle" title="Drag to reorder">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+                  </span>
                   <input v-model="exercise.name" class="form-input exercise-name-input" placeholder="Exercise name" />
                   <button class="btn-remove" @click="planForm.exercises.splice(eIndex, 1)">×</button>
                 </div>
@@ -360,6 +386,73 @@ const planToDelete = ref<LiftPlan | null>(null)
 const showAiPlanner = ref(false)
 
 const availableIcons = ['💪', '🏋️', '🦵', '🔥', '⚡', '🏃', '🚴', '⭐', '💎', '🎯', '🚀', '🧱']
+
+// Drag-and-drop state (editor modal)
+const dragOverIndex = ref<number | null>(null)
+
+function onExerciseDragStart(e: DragEvent, index: number) {
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+}
+
+function onExerciseDragOver(e: DragEvent, index: number) {
+  e.preventDefault()
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+  dragOverIndex.value = index
+}
+
+function onExerciseDragLeave() {
+  dragOverIndex.value = null
+}
+
+function onExerciseDrop(e: DragEvent, targetIndex: number) {
+  e.preventDefault()
+  const fromIndex = Number(e.dataTransfer?.getData('text/plain'))
+  dragOverIndex.value = null
+  if (isNaN(fromIndex) || fromIndex === targetIndex) return
+  const exercises = planForm.value.exercises
+  const [moved] = exercises.splice(fromIndex, 1)
+  exercises.splice(targetIndex, 0, moved)
+}
+
+// Drag-and-drop state (preview list)
+const previewDragOverIndex = ref<number | null>(null)
+
+function onPreviewDragStart(e: DragEvent, index: number) {
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+}
+
+function onPreviewDragOver(e: DragEvent, index: number) {
+  e.preventDefault()
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+  previewDragOverIndex.value = index
+}
+
+function onPreviewDragLeave() {
+  previewDragOverIndex.value = null
+}
+
+function onPreviewDrop(e: DragEvent, targetIndex: number) {
+  e.preventDefault()
+  const fromIndex = Number(e.dataTransfer?.getData('text/plain'))
+  previewDragOverIndex.value = null
+  if (isNaN(fromIndex) || fromIndex === targetIndex) return
+  const plan = selectedPlan.value
+  if (!plan) return
+  const exercises = [...plan.exercises]
+  const [moved] = exercises.splice(fromIndex, 1)
+  exercises.splice(targetIndex, 0, moved)
+  store.updatePlan(plan.id, { exercises })
+}
 
 const exerciseSuggestions = [
   'Bench Press', 'Squat', 'Deadlift', 'Overhead Press', 'Barbell Row',
@@ -656,6 +749,32 @@ async function startWorkout() {
   border-radius: var(--radius-md);
   padding: 10px 14px;
   border: 1.5px solid var(--border-color);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: grab;
+}
+
+.exercise-row.drag-over {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+  transform: translateY(2px);
+}
+
+.drag-handle-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: grab;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.drag-handle-inline:hover {
+  color: var(--accent-primary);
+  background: var(--accent-glow);
 }
 
 .exercise-info {
@@ -1220,6 +1339,37 @@ async function startWorkout() {
   flex: 1;
   padding: 8px 10px !important;
   font-size: 13px !important;
+}
+
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: grab;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.drag-handle:hover {
+  color: var(--accent-primary);
+  background: var(--accent-glow);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.editor-exercise {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.editor-exercise.drag-over {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+  transform: translateY(2px);
 }
 
 .btn-remove {
