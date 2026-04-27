@@ -119,57 +119,8 @@ const achievementDefinitions: Omit<Achievement, 'unlocked' | 'unlockedAt'>[] = [
   },
 ]
 
-// Default plans for new users
-const defaultPlans: WorkoutPlan[] = [
-  {
-    id: 'beginner',
-    name: 'Beginner',
-    icon: '🌱',
-    description: 'Easy start for beginners',
-    exercises: [
-      { id: 'e1', name: 'Run', duration: 20, sets: 3, color: '#ff3b30' },
-      { id: 'e2', name: 'Walk', duration: 40, sets: 3, color: '#34c759' },
-    ],
-    restBetweenSets: 30,
-    restBetweenExercises: 60,
-    warmupDuration: 30,
-    cooldownDuration: 30,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'fatburn',
-    name: 'Fat Burn',
-    icon: '🔥',
-    description: 'High intensity fat burning',
-    exercises: [
-      { id: 'e1', name: 'Run', duration: 30, sets: 4, color: '#ff3b30' },
-      { id: 'e2', name: 'Walk', duration: 30, sets: 4, color: '#34c759' },
-    ],
-    restBetweenSets: 30,
-    restBetweenExercises: 60,
-    warmupDuration: 30,
-    cooldownDuration: 30,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'hiitbeast',
-    name: 'HIIT Beast',
-    icon: '⚡',
-    description: 'Maximum intensity training',
-    exercises: [
-      { id: 'e1', name: 'Run', duration: 40, sets: 5, color: '#ff3b30' },
-      { id: 'e2', name: 'Walk', duration: 20, sets: 5, color: '#34c759' },
-    ],
-    restBetweenSets: 30,
-    restBetweenExercises: 60,
-    warmupDuration: 30,
-    cooldownDuration: 30,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-]
+// No preset plans — users start from scratch
+const defaultPlans: WorkoutPlan[] = []
 
 export const useWorkoutStore = defineStore('workout', {
   state: () => ({
@@ -251,11 +202,6 @@ export const useWorkoutStore = defineStore('workout', {
       const plan = this.selectedPlan
       if (!plan || state.currentExerciseIndex >= plan.exercises.length) return null
       return plan.exercises[state.currentExerciseIndex]
-    },
-
-    // Check if user has any custom plans
-    hasCustomPlans(state): boolean {
-      return state.plans.some(p => !['beginner', 'fatburn', 'hiitbeast'].includes(p.id))
     },
 
     isFavorite(state) {
@@ -505,18 +451,16 @@ export const useWorkoutStore = defineStore('workout', {
           try {
             this.plans = JSON.parse(stored)
           } catch {
-            this.plans = [...defaultPlans]
+            this.plans = []
           }
         } else {
-          // First time - use defaults
-          this.plans = [...defaultPlans]
+          this.plans = []
         }
-        // Select first plan if none selected
         if (!this.selectedPlanId && this.plans.length > 0) {
           this.selectedPlanId = this.plans[0].id
         }
       } else {
-        this.plans = [...defaultPlans]
+        this.plans = []
       }
     },
 

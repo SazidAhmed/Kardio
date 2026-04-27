@@ -329,7 +329,7 @@ const defaultForm = {
   cooldownDuration: 30,
   restBetweenSets: 30,
   restBetweenExercises: 60,
-  exercises: [{ id: '1', name: 'New Exercise', duration: 30, sets: 3, color: '#5856d6' }] as WorkoutExercise[],
+  exercises: [] as WorkoutExercise[],
 }
 
 const planForm = reactive({ ...defaultForm })
@@ -343,7 +343,7 @@ function generateExerciseId() {
 function startCreatePlan() {
   editingPlan.value = null
   Object.assign(planForm, { ...defaultForm })
-  planForm.exercises = [{ id: generateExerciseId(), name: 'New Exercise', duration: 30, sets: 3, color: '#5856d6' }]
+  planForm.exercises = []
   showEditor.value = true
 }
 
@@ -370,7 +370,7 @@ function closeEditor() {
 function addExercise() {
   planForm.exercises.push({
     id: generateExerciseId(),
-    name: 'New Exercise',
+    name: '',
     duration: 30,
     sets: 3,
     color: '#5856d6',
