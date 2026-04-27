@@ -466,9 +466,7 @@ const defaultForm = {
   name: '',
   icon: '💪',
   restBetweenSets: 90,
-  exercises: [
-    { id: `ex_${Date.now()}_1`, name: '', sets: [{ reps: 8, weight: 0, completed: false }] as LiftSet[] }
-  ] as LiftExercise[],
+  exercises: [] as LiftExercise[],
 }
 
 const planForm = ref({ ...JSON.parse(JSON.stringify(defaultForm)) })
@@ -480,7 +478,6 @@ function generateId() {
 
 function resetForm() {
   planForm.value = JSON.parse(JSON.stringify(defaultForm))
-  planForm.value.exercises[0].id = generateId()
 }
 
 function openEditor(plan: LiftPlan) {

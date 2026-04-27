@@ -72,54 +72,8 @@ const liftAchievementDefinitions: Omit<LiftAchievement, 'unlocked' | 'unlockedAt
   { id: 'century_sets', name: 'Century Sets', icon: '💯', description: '10 workouts completed' },
 ]
 
-// Default lift plans
-const defaultLiftPlans: LiftPlan[] = [
-  {
-    id: 'push',
-    name: 'Push Day',
-    icon: '💪',
-    description: 'Chest, shoulders & triceps',
-    exercises: [
-      { id: 'pe1', name: 'Bench Press', sets: Array.from({ length: 4 }, () => ({ reps: 8, weight: 60, completed: false })) },
-      { id: 'pe2', name: 'Overhead Press', sets: Array.from({ length: 3 }, () => ({ reps: 8, weight: 40, completed: false })) },
-      { id: 'pe3', name: 'Incline Dumbbell Press', sets: Array.from({ length: 3 }, () => ({ reps: 10, weight: 24, completed: false })) },
-      { id: 'pe4', name: 'Tricep Dips', sets: Array.from({ length: 3 }, () => ({ reps: 12, weight: 0, completed: false })) },
-    ],
-    restBetweenSets: 90,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'pull',
-    name: 'Pull Day',
-    icon: '🏋️',
-    description: 'Back & biceps',
-    exercises: [
-      { id: 'ple1', name: 'Deadlift', sets: Array.from({ length: 4 }, () => ({ reps: 5, weight: 80, completed: false })) },
-      { id: 'ple2', name: 'Barbell Row', sets: Array.from({ length: 4 }, () => ({ reps: 8, weight: 50, completed: false })) },
-      { id: 'ple3', name: 'Pull-ups', sets: Array.from({ length: 3 }, () => ({ reps: 8, weight: 0, completed: false })) },
-      { id: 'ple4', name: 'Bicep Curls', sets: Array.from({ length: 3 }, () => ({ reps: 12, weight: 16, completed: false })) },
-    ],
-    restBetweenSets: 90,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'legs',
-    name: 'Leg Day',
-    icon: '🦵',
-    description: 'Quads, hamstrings & calves',
-    exercises: [
-      { id: 'le1', name: 'Squat', sets: Array.from({ length: 4 }, () => ({ reps: 8, weight: 70, completed: false })) },
-      { id: 'le2', name: 'Leg Press', sets: Array.from({ length: 3 }, () => ({ reps: 10, weight: 100, completed: false })) },
-      { id: 'le3', name: 'Romanian Deadlift', sets: Array.from({ length: 3 }, () => ({ reps: 8, weight: 60, completed: false })) },
-      { id: 'le4', name: 'Calf Raises', sets: Array.from({ length: 4 }, () => ({ reps: 15, weight: 40, completed: false })) },
-    ],
-    restBetweenSets: 90,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-]
+// No preset plans — users start from scratch
+const defaultLiftPlans: LiftPlan[] = []
 
 export const useLiftStore = defineStore('lift', {
   state: () => ({
@@ -369,10 +323,10 @@ export const useLiftStore = defineStore('lift', {
           try {
             this.plans = JSON.parse(stored)
           } catch {
-            this.plans = [...defaultLiftPlans]
+            this.plans = []
           }
         } else {
-          this.plans = [...defaultLiftPlans]
+          this.plans = []
         }
         if (!this.selectedPlanId && this.plans.length > 0) {
           this.selectedPlanId = this.plans[0].id
