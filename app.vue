@@ -82,6 +82,7 @@ import { useWorkoutStore } from '~/stores/workout'
 import { useAiStore } from '~/stores/ai'
 import { useModeStore, type AppMode, type CardioTab, type LiftingTab } from '~/stores/mode'
 import { usePWA } from '~/composables/usePWA'
+import { requestPersistentStorage } from '~/composables/useDataBackup'
 
 const store = useWorkoutStore()
 const aiStore = useAiStore()
@@ -122,6 +123,9 @@ function handlePlanSelected() {
 }
 
 onMounted(async () => {
+  // Request persistent storage to prevent browser from clearing data
+  requestPersistentStorage()
+
   // Load mode from storage
   modeStore.loadMode()
   aiStore.loadHistory()
