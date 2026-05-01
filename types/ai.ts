@@ -81,6 +81,6 @@ export interface AiLiftPlan {
 
 export interface AiPlannerResponse {
   analysis: AiAnalysis
-  cardioPlan: AiCardioPlan
-  liftPlan: AiLiftPlan
+  cardioPlans: AiCardioPlan[]
+  liftPlans: AiLiftPlan[]
 }

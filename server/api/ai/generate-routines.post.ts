@@ -45,23 +45,26 @@ function asStringArray(value: unknown, maxItems = 8) {
 }
 
 function buildPrompt(profile: AiPlannerRequest['profile']) {
+  const daysPerWeek = profile.daysPerWeek ?? 3
   return [
     'You are a fitness programming assistant.',
     'Analyze the provided body photos conservatively for general coaching observations only.',
     'Do not diagnose injuries, diseases, posture disorders, or body-fat percentage.',
     'Do not infer medical conditions, pain causes, asymmetries, or injury severity from images.',
     'When uncertain, state uncertainty and lower confidence instead of guessing.',
-    'Use the profile data and images to create one cardio plan and one lifting plan for this app.',
-    'Return strict JSON only with these top-level keys: analysis, cardioPlan, liftPlan.',
+    `Use the profile data and images to create ${daysPerWeek} distinct cardio plans and ${daysPerWeek} distinct lifting plans for this app.`,
+    `The user wants to train ${daysPerWeek} days per week, so each cardio plan should target different muscle groups or cardio focus areas for variety.`,
+    'Return strict JSON only with these top-level keys: analysis, cardioPlans, liftPlans.',
     'The analysis object must include: summary, confidence, flags, focusAreas, disclaimer.',
-    'The cardioPlan object must include: name, icon, description, warmupDuration, cooldownDuration, restBetweenSets, restBetweenExercises, exercises.',
+    `The cardioPlans array must contain exactly ${daysPerWeek} cardio plan objects. Each cardio plan must include: name, icon, description, warmupDuration, cooldownDuration, restBetweenSets, restBetweenExercises, exercises.`,
     'Each cardio exercise must include: name, duration, sets, color.',
-    'The liftPlan object must include: name, icon, description, restBetweenSets, exercises.',
+    `The liftPlans array must contain exactly ${daysPerWeek} lifting plan objects. Each lift plan must include: name, icon, description, restBetweenSets, exercises.`,
     'Each lift exercise must include: name and sets, and each set must include reps and weight.',
+    'Each plan should vary the exercises to create a balanced weekly program (e.g., Day 1: upper body, Day 2: lower body, Day 3: full body, etc.).',
     'Use realistic beginner or intermediate prescriptions based on the provided experience.',
     'If equipment is limited, prefer bodyweight or minimal-equipment exercises.',
     'If injuries or limitations are mentioned, avoid movements likely to aggravate them and suggest conservative alternatives.',
-    'Prefer 4 to 6 cardio exercises and 4 to 6 lifting exercises.',
+    'Prefer 4 to 6 cardio exercises and 4 to 6 lifting exercises per plan.',
     'Use whole-number seconds, reps, sets, and weights.',
     'Keep the summary to 1 or 2 short sentences.',
     'Put only short bullet-like strings in flags and focusAreas.',
@@ -229,30 +232,47 @@ function parseRequest(body: unknown): AiPlannerRequest {
   }
 }
 
-function normalizeResponse(data: Partial<AiPlannerResponse>): AiPlannerResponse {
-  const safeData = isRecord(data) ? data : {}
-  const analysis = isRecord(safeData.analysis) ? safeData.analysis : {}
-  const cardioPlan = isRecord(safeData.cardioPlan) ? safeData.cardioPlan : {}
-  const liftPlan = isRecord(safeData.liftPlan) ? safeData.liftPlan : {}
+function normalizeCardioPlan(plan: unknown, index: number): AiCardioPlan {
+  const safePlan = isRecord(plan) ? plan : {}
 
-  const cardioExercises = Array.isArray(cardioPlan.exercises)
-    ? cardioPlan.exercises
+  const cardioExercises = Array.isArray(safePlan.exercises)
+    ? safePlan.exercises
         .filter(isRecord)
         .slice(0, 12)
-        .map((exercise, index) => ({
-          name: asString(exercise.name, `Cardio Exercise ${index + 1}`),
+        .map((exercise, exIndex) => ({
+          name: asString(exercise.name, `Cardio Exercise ${exIndex + 1}`),
           duration: clampNumber(exercise.duration, 30, 10, 3600),
           sets: clampNumber(exercise.sets, 1, 1, 20),
-          color: asString(exercise.color, ['#34c759', '#ff9500', '#5856d6', '#ff3b30'][index % 4]),
+          color: asString(exercise.color, ['#34c759', '#ff9500', '#5856d6', '#ff3b30'][exIndex % 4]),
         }))
     : []
 
-  const liftExercises = Array.isArray(liftPlan.exercises)
-    ? liftPlan.exercises
+  return {
+    name: asString(safePlan.name, `AI Cardio Plan ${index + 1}`),
+    icon: asString(safePlan.icon, '🔥'),
+    description: asString(safePlan.description, 'A progressive cardio routine based on your submitted profile.'),
+    warmupDuration: clampNumber(safePlan.warmupDuration, 180, 0, 1800),
+    cooldownDuration: clampNumber(safePlan.cooldownDuration, 180, 0, 1800),
+    restBetweenSets: clampNumber(safePlan.restBetweenSets, 45, 0, 600),
+    restBetweenExercises: clampNumber(safePlan.restBetweenExercises, 60, 0, 600),
+    exercises: cardioExercises.length > 0
+      ? cardioExercises
+      : [
+          { name: 'Brisk Walk', duration: 180, sets: 3, color: '#34c759' },
+          { name: 'Jog', duration: 60, sets: 3, color: '#ff9500' },
+        ],
+  }
+}
+
+function normalizeLiftPlan(plan: unknown, index: number): AiLiftPlan {
+  const safePlan = isRecord(plan) ? plan : {}
+
+  const liftExercises = Array.isArray(safePlan.exercises)
+    ? safePlan.exercises
         .filter(isRecord)
         .slice(0, 12)
-        .map((exercise, exerciseIndex) => ({
-          name: asString(exercise.name, `Lift Exercise ${exerciseIndex + 1}`),
+        .map((exercise, exIndex) => ({
+          name: asString(exercise.name, `Lift Exercise ${exIndex + 1}`),
           sets: Array.isArray(exercise.sets)
             ? exercise.sets
                 .filter(isRecord)
@@ -267,6 +287,58 @@ function normalizeResponse(data: Partial<AiPlannerResponse>): AiPlannerResponse 
     : []
 
   return {
+    name: asString(safePlan.name, `AI Lift Plan ${index + 1}`),
+    icon: asString(safePlan.icon, '�'),
+    description: asString(safePlan.description, 'A balanced strength routine based on your submitted profile.'),
+    restBetweenSets: clampNumber(safePlan.restBetweenSets, 90, 0, 900),
+    exercises: liftExercises.length > 0
+      ? liftExercises
+      : [
+          {
+            name: 'Goblet Squat',
+            sets: [
+              { reps: 10, weight: 10 },
+              { reps: 10, weight: 10 },
+              { reps: 10, weight: 10 },
+            ],
+          },
+        ],
+  }
+}
+
+function normalizeResponse(data: Partial<AiPlannerResponse>, expectedDays: number): AiPlannerResponse {
+  const safeData = isRecord(data) ? data : {}
+  const analysis = isRecord(safeData.analysis) ? safeData.analysis : {}
+
+  // Handle cardioPlans array
+  const cardioPlansRaw = Array.isArray(safeData.cardioPlans)
+    ? safeData.cardioPlans
+    : // Fallback: handle legacy single cardioPlan
+      isRecord(safeData.cardioPlan)
+      ? [safeData.cardioPlan]
+      : []
+
+  // Handle liftPlans array
+  const liftPlansRaw = Array.isArray(safeData.liftPlans)
+    ? safeData.liftPlans
+    : // Fallback: handle legacy single liftPlan
+      isRecord(safeData.liftPlan)
+      ? [safeData.liftPlan]
+      : []
+
+  // Normalize all plans
+  let cardioPlans = cardioPlansRaw.slice(0, expectedDays).map((plan, index) => normalizeCardioPlan(plan, index))
+  let liftPlans = liftPlansRaw.slice(0, expectedDays).map((plan, index) => normalizeLiftPlan(plan, index))
+
+  // Ensure we have at least the expected number of plans (fallback)
+  while (cardioPlans.length < expectedDays) {
+    cardioPlans.push(normalizeCardioPlan({}, cardioPlans.length))
+  }
+  while (liftPlans.length < expectedDays) {
+    liftPlans.push(normalizeLiftPlan({}, liftPlans.length))
+  }
+
+  return {
     analysis: {
       summary: asString(analysis.summary, 'General training guidance generated from the submitted profile and photos.'),
       confidence: analysis.confidence === 'high' || analysis.confidence === 'low' ? analysis.confidence : 'medium',
@@ -274,39 +346,8 @@ function normalizeResponse(data: Partial<AiPlannerResponse>): AiPlannerResponse 
       focusAreas: asStringArray(analysis.focusAreas),
       disclaimer: asString(analysis.disclaimer, 'AI-generated fitness guidance only. Not medical advice.'),
     },
-    cardioPlan: {
-      name: asString(cardioPlan.name, 'AI Cardio Plan'),
-      icon: asString(cardioPlan.icon, '🔥'),
-      description: asString(cardioPlan.description, 'A progressive cardio routine based on your submitted profile.'),
-      warmupDuration: clampNumber(cardioPlan.warmupDuration, 180, 0, 1800),
-      cooldownDuration: clampNumber(cardioPlan.cooldownDuration, 180, 0, 1800),
-      restBetweenSets: clampNumber(cardioPlan.restBetweenSets, 45, 0, 600),
-      restBetweenExercises: clampNumber(cardioPlan.restBetweenExercises, 60, 0, 600),
-      exercises: cardioExercises.length > 0
-        ? cardioExercises
-        : [
-            { name: 'Brisk Walk', duration: 180, sets: 3, color: '#34c759' },
-            { name: 'Jog', duration: 60, sets: 3, color: '#ff9500' },
-          ],
-    },
-    liftPlan: {
-      name: asString(liftPlan.name, 'AI Lift Plan'),
-      icon: asString(liftPlan.icon, '💪'),
-      description: asString(liftPlan.description, 'A balanced strength routine based on your submitted profile.'),
-      restBetweenSets: clampNumber(liftPlan.restBetweenSets, 90, 0, 900),
-      exercises: liftExercises.length > 0
-        ? liftExercises
-        : [
-            {
-              name: 'Goblet Squat',
-              sets: [
-                { reps: 10, weight: 10 },
-                { reps: 10, weight: 10 },
-                { reps: 10, weight: 10 },
-              ],
-            },
-          ],
-    },
+    cardioPlans,
+    liftPlans,
   }
 }
 
@@ -382,5 +423,5 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  return normalizeResponse(parsed)
+  return normalizeResponse(parsed, body.profile.daysPerWeek ?? 3)
 })

@@ -134,53 +134,55 @@
             </ul>
           </div>
 
-          <div class="plan-card">
+          <div class="plans-summary">
+            <p class="summary-text">
+              Generated <strong>{{ result.cardioPlans.length }}</strong> cardio plan{{ result.cardioPlans.length > 1 ? 's' : '' }}
+              and <strong>{{ result.liftPlans.length }}</strong> lift plan{{ result.liftPlans.length > 1 ? 's' : '' }}
+              for {{ profile.daysPerWeek }} day{{ profile.daysPerWeek > 1 ? 's' : '' }}/week
+            </p>
+          </div>
+
+          <div v-for="(cardioPlan, index) in result.cardioPlans" :key="`cardio-${index}`" class="plan-card">
             <div class="plan-card-head">
               <div>
-                <span class="plan-icon">{{ result.cardioPlan.icon }}</span>
-                <h4>{{ result.cardioPlan.name }}</h4>
+                <span class="plan-icon">{{ cardioPlan.icon }}</span>
+                <h4>Day {{ index + 1 }}: {{ cardioPlan.name }}</h4>
               </div>
-              <button class="secondary-btn" :disabled="cardioSaved" @click="saveCardioPlan">
-                {{ cardioSaved ? 'Saved' : 'Save Cardio' }}
-              </button>
             </div>
-            <p class="plan-description">{{ result.cardioPlan.description }}</p>
+            <p class="plan-description">{{ cardioPlan.description }}</p>
             <div class="meta-row">
-              <span>Warmup {{ result.cardioPlan.warmupDuration }}s</span>
-              <span>Cooldown {{ result.cardioPlan.cooldownDuration }}s</span>
-              <span>Rest {{ result.cardioPlan.restBetweenSets }}s</span>
+              <span>Warmup {{ cardioPlan.warmupDuration }}s</span>
+              <span>Cooldown {{ cardioPlan.cooldownDuration }}s</span>
+              <span>Rest {{ cardioPlan.restBetweenSets }}s</span>
             </div>
             <div class="exercise-list">
-              <div v-for="exercise in result.cardioPlan.exercises" :key="exercise.name" class="exercise-row">
+              <div v-for="exercise in cardioPlan.exercises" :key="`${index}-${exercise.name}`" class="exercise-row">
                 <span>{{ exercise.name }}</span>
                 <span>{{ exercise.sets }} x {{ exercise.duration }}s</span>
               </div>
             </div>
           </div>
 
-          <div class="plan-card">
+          <div v-for="(liftPlan, index) in result.liftPlans" :key="`lift-${index}`" class="plan-card">
             <div class="plan-card-head">
               <div>
-                <span class="plan-icon">{{ result.liftPlan.icon }}</span>
-                <h4>{{ result.liftPlan.name }}</h4>
+                <span class="plan-icon">{{ liftPlan.icon }}</span>
+                <h4>Day {{ index + 1 }}: {{ liftPlan.name }}</h4>
               </div>
-              <button class="secondary-btn" :disabled="liftSaved" @click="saveLiftPlan">
-                {{ liftSaved ? 'Saved' : 'Save Lift' }}
-              </button>
             </div>
-            <p class="plan-description">{{ result.liftPlan.description }}</p>
+            <p class="plan-description">{{ liftPlan.description }}</p>
             <div class="meta-row">
-              <span>Rest {{ result.liftPlan.restBetweenSets }}s</span>
-              <span>{{ result.liftPlan.exercises.length }} exercises</span>
+              <span>Rest {{ liftPlan.restBetweenSets }}s</span>
+              <span>{{ liftPlan.exercises.length }} exercises</span>
             </div>
             <div class="exercise-list">
-              <div v-for="exercise in result.liftPlan.exercises" :key="exercise.name" class="exercise-stack">
+              <div v-for="exercise in liftPlan.exercises" :key="`${index}-${exercise.name}`" class="exercise-stack">
                 <div class="exercise-row">
                   <span>{{ exercise.name }}</span>
                   <span>{{ exercise.sets.length }} sets</span>
                 </div>
                 <div class="set-chip-row">
-                  <span v-for="(set, index) in exercise.sets" :key="`${exercise.name}-${index}`" class="set-chip">
+                  <span v-for="(set, setIndex) in exercise.sets" :key="`${index}-${exercise.name}-${setIndex}`" class="set-chip">
                     {{ set.reps }} reps @ {{ set.weight }}kg
                   </span>
                 </div>
@@ -445,71 +447,83 @@ async function generatePlans() {
   }
 }
 
-function saveCardioPlan() {
+function saveCardioPlans() {
   if (!result.value) return
 
-  const cardioPlan = result.value.cardioPlan
-  const planId = workoutStore.createPlan({
-    name: cardioPlan.name,
-    icon: cardioPlan.icon,
-    description: cardioPlan.description,
-    exercises: cardioPlan.exercises.map((exercise, index) => ({
-      id: `ai_cardio_${Date.now()}_${index}`,
-      name: exercise.name,
-      duration: exercise.duration,
-      sets: exercise.sets,
-      color: exercise.color,
-    })),
-    restBetweenSets: cardioPlan.restBetweenSets,
-    restBetweenExercises: cardioPlan.restBetweenExercises,
-    warmupDuration: cardioPlan.warmupDuration,
-    cooldownDuration: cardioPlan.cooldownDuration,
+  const savedPlanIds: string[] = []
+  result.value.cardioPlans.forEach((cardioPlan, planIndex) => {
+    const planId = workoutStore.createPlan({
+      name: cardioPlan.name,
+      icon: cardioPlan.icon,
+      description: cardioPlan.description,
+      exercises: cardioPlan.exercises.map((exercise, index) => ({
+        id: `ai_cardio_${Date.now()}_${planIndex}_${index}`,
+        name: exercise.name,
+        duration: exercise.duration,
+        sets: exercise.sets,
+        color: exercise.color,
+      })),
+      restBetweenSets: cardioPlan.restBetweenSets,
+      restBetweenExercises: cardioPlan.restBetweenExercises,
+      warmupDuration: cardioPlan.warmupDuration,
+      cooldownDuration: cardioPlan.cooldownDuration,
+    })
+    savedPlanIds.push(planId)
   })
 
-  workoutStore.selectPlan(planId)
+  // Select the first plan
+  if (savedPlanIds.length > 0) {
+    workoutStore.selectPlan(savedPlanIds[0])
+  }
   cardioSaved.value = true
   if (latestRecordId.value) {
     aiStore.markPlanSaved(latestRecordId.value, 'cardio')
   }
-  saveMessage.value = 'Cardio plan saved to My Workout Plans.'
+  saveMessage.value = `${savedPlanIds.length} cardio plan${savedPlanIds.length > 1 ? 's' : ''} saved to My Workout Plans.`
 }
 
-function saveLiftPlan() {
+function saveLiftPlans() {
   if (!result.value) return
 
-  const liftPlan = result.value.liftPlan
-  const planId = liftStore.createPlan({
-    name: liftPlan.name,
-    icon: liftPlan.icon,
-    description: liftPlan.description,
-    restBetweenSets: liftPlan.restBetweenSets,
-    exercises: liftPlan.exercises.map((exercise, exerciseIndex) => ({
-      id: `ai_lift_${Date.now()}_${exerciseIndex}`,
-      name: exercise.name,
-      sets: exercise.sets.map((set) => ({
-        reps: set.reps,
-        weight: set.weight,
-        completed: false,
+  const savedPlanIds: string[] = []
+  result.value.liftPlans.forEach((liftPlan, planIndex) => {
+    const planId = liftStore.createPlan({
+      name: liftPlan.name,
+      icon: liftPlan.icon,
+      description: liftPlan.description,
+      restBetweenSets: liftPlan.restBetweenSets,
+      exercises: liftPlan.exercises.map((exercise, exerciseIndex) => ({
+        id: `ai_lift_${Date.now()}_${planIndex}_${exerciseIndex}`,
+        name: exercise.name,
+        sets: exercise.sets.map((set) => ({
+          reps: set.reps,
+          weight: set.weight,
+          completed: false,
+        })),
       })),
-    })),
+    })
+    savedPlanIds.push(planId)
   })
 
-  liftStore.selectPlan(planId)
+  // Select the first plan
+  if (savedPlanIds.length > 0) {
+    liftStore.selectPlan(savedPlanIds[0])
+  }
   liftSaved.value = true
   if (latestRecordId.value) {
     aiStore.markPlanSaved(latestRecordId.value, 'lift')
   }
   saveMessage.value = cardioSaved.value
-    ? 'Cardio and lift plans saved.'
-    : 'Lift plan saved to Select Routine.'
+    ? `All plans saved (${result.value.cardioPlans.length} cardio, ${savedPlanIds.length} lift).`
+    : `${savedPlanIds.length} lift plan${savedPlanIds.length > 1 ? 's' : ''} saved to Select Routine.`
 }
 
 function saveBothPlans() {
   if (!cardioSaved.value) {
-    saveCardioPlan()
+    saveCardioPlans()
   }
   if (!liftSaved.value) {
-    saveLiftPlan()
+    saveLiftPlans()
   }
   saveMessage.value = 'Cardio and lift plans saved.'
 }
@@ -822,6 +836,24 @@ function saveBothPlans() {
   margin: 12px 0 0;
   padding-left: 18px;
   color: var(--text-secondary);
+}
+
+.plans-summary {
+  padding: 12px 16px;
+  background: var(--accent-glow);
+  border-radius: 14px;
+  border: 1px solid var(--accent-primary);
+}
+
+.summary-text {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-align: center;
+}
+
+.summary-text strong {
+  color: var(--accent-primary);
 }
 
 .plan-icon {
