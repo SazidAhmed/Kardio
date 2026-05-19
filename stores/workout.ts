@@ -204,6 +204,98 @@ export const useWorkoutStore = defineStore('workout', {
       return plan.exercises[state.currentExerciseIndex]
     },
 
+    upNext(state): { phase: TimerPhase; name: string; duration: number; set?: number; totalSets?: number } | null {
+      const plan = this.selectedPlan
+      if (!plan) return null
+
+      if (state.timerState === 'idle' || state.timerState === 'finished') {
+        if (plan.warmupDuration > 0) {
+          return { phase: 'warmup', name: 'Warmup', duration: plan.warmupDuration }
+        } else if (plan.exercises.length > 0) {
+          return {
+            phase: 'exercise',
+            name: plan.exercises[0].name,
+            duration: plan.exercises[0].duration,
+            set: 1,
+            totalSets: plan.exercises[0].sets
+          }
+        }
+        return null
+      }
+
+      const currentExercise = plan.exercises[state.currentExerciseIndex]
+      if (!currentExercise) return null
+
+      if (state.currentPhase === 'warmup') {
+        const nextExercise = plan.exercises[0]
+        if (nextExercise) {
+          return {
+            phase: 'exercise',
+            name: nextExercise.name,
+            duration: nextExercise.duration,
+            set: 1,
+            totalSets: nextExercise.sets
+          }
+        }
+      } else if (state.currentPhase === 'exercise') {
+        if (state.currentSet < currentExercise.sets) {
+          if (plan.restBetweenSets > 0) {
+            return { phase: 'rest', name: 'Rest', duration: plan.restBetweenSets }
+          } else {
+            return {
+              phase: 'exercise',
+              name: currentExercise.name,
+              duration: currentExercise.duration,
+              set: state.currentSet + 1,
+              totalSets: currentExercise.sets
+            }
+          }
+        } else {
+          if (state.currentExerciseIndex < plan.exercises.length - 1) {
+            if (plan.restBetweenExercises > 0) {
+              return { phase: 'rest', name: 'Rest', duration: plan.restBetweenExercises }
+            } else {
+              const nextExercise = plan.exercises[state.currentExerciseIndex + 1]
+              return {
+                phase: 'exercise',
+                name: nextExercise.name,
+                duration: nextExercise.duration,
+                set: 1,
+                totalSets: nextExercise.sets
+              }
+            }
+          } else {
+            if (plan.cooldownDuration > 0) {
+              return { phase: 'cooldown', name: 'Cooldown', duration: plan.cooldownDuration }
+            }
+          }
+        }
+      } else if (state.currentPhase === 'rest') {
+        if (state.currentSet < currentExercise.sets) {
+          return {
+            phase: 'exercise',
+            name: currentExercise.name,
+            duration: currentExercise.duration,
+            set: state.currentSet + 1,
+            totalSets: currentExercise.sets
+          }
+        } else if (state.currentExerciseIndex < plan.exercises.length - 1) {
+          const nextExercise = plan.exercises[state.currentExerciseIndex + 1]
+          return {
+            phase: 'exercise',
+            name: nextExercise.name,
+            duration: nextExercise.duration,
+            set: 1,
+            totalSets: nextExercise.sets
+          }
+        }
+      } else if (state.currentPhase === 'cooldown') {
+        return null
+      }
+
+      return null
+    },
+
     isFavorite(state) {
       return (planId: string) => state.favoritePresets.includes(planId)
     },
@@ -675,6 +767,11 @@ export const useWorkoutStore = defineStore('workout', {
       this.currentExerciseIndex = 0
       this.timeRemaining = plan?.warmupDuration || 30
       this.totalElapsed = 0
+    },
+
+    async skipSet() {
+      if (this.timerState !== 'running' && this.timerState !== 'paused') return
+      await this.advancePhase()
     },
 
     async tick() {
