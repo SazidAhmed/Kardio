@@ -207,15 +207,11 @@
         <span class="phase-round">— Set {{ store.currentSet }}/{{ store.currentExercise.sets }}</span>
       </div>
 
-      <p v-if="store.timerState === 'idle' || store.timerState === 'paused'" class="up-next">
-        <template v-if="selectedPlan?.warmupDuration > 0">
-          Starting with: <strong :style="{ color: phaseColors.warmup }">WARMUP</strong>
-          <span class="up-next-time">({{ formatSeconds(selectedPlan.warmupDuration) }})</span>
-        </template>
-        <template v-else-if="selectedPlan?.exercises.length > 0">
-          Starting with: <strong :style="{ color: getExerciseColor(selectedPlan.exercises[0].name) }">{{ selectedPlan.exercises[0].name.toUpperCase() }}</strong>
-          <span class="up-next-time">({{ formatSeconds(selectedPlan.exercises[0].duration) }})</span>
-        </template>
+      <p v-if="store.upNext" class="up-next">
+        <span>{{ store.timerState === 'idle' ? 'Starting with: ' : 'Up Next: ' }}</span>
+        <strong :style="{ color: getUpNextColor(store.upNext) }">{{ store.upNext.name.toUpperCase() }}</strong>
+        <span v-if="store.upNext.set" class="up-next-set"> — Set {{ store.upNext.set }}/{{ store.upNext.totalSets }}</span>
+        <span class="up-next-time"> ({{ formatSeconds(store.upNext.duration) }})</span>
       </p>
     </section>
 
@@ -235,6 +231,13 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           Resume
         </button>
+        <button class="btn-skip" @click="store.skipSet()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/>
+            <line x1="19" y1="5" x2="19" y2="19"/>
+          </svg>
+          Skip
+        </button>
         <button class="btn-reset-small" @click="store.resetTimer()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>
           Reset
@@ -249,6 +252,13 @@
         <button class="btn-stop" @click="store.finishWorkout(false)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
           Stop
+        </button>
+        <button class="btn-skip" @click="store.skipSet()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/>
+            <line x1="19" y1="5" x2="19" y2="19"/>
+          </svg>
+          Skip
         </button>
         <button class="btn-reset-small" @click="store.resetTimer()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>
@@ -435,6 +445,14 @@ const phaseColor = computed(() => {
   }
   return phaseColors[store.currentPhase] || '#5856d6'
 })
+
+function getUpNextColor(upNext: any): string {
+  if (!upNext) return '#5856d6'
+  if (upNext.phase === 'exercise') {
+    return getExerciseColor(upNext.name)
+  }
+  return phaseColors[upNext.phase] || '#5856d6'
+}
 
 // Display name for current phase
 const displayPhaseName = computed(() => {
@@ -955,7 +973,7 @@ const dashOffset = computed(() => {
   display: flex;
   gap: 8px;
   width: 100%;
-  max-width: 220px;
+  max-width: 320px;
   justify-content: center;
 }
 
@@ -975,6 +993,51 @@ const dashOffset = computed(() => {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: var(--shadow-card);
+}
+
+.btn-skip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s ease;
+}
+
+.btn-skip:hover {
+  background: color-mix(in srgb, var(--accent-primary) 25%, transparent);
+}
+
+@media (max-width: 380px) {
+  .running-actions, .paused-actions {
+    gap: 6px;
+  }
+  .btn-pause,
+  .btn-stop,
+  .btn-resume,
+  .btn-skip,
+  .btn-reset-small {
+    padding: 8px 6px;
+    font-size: 11px;
+    gap: 2px;
+  }
+  .btn-pause svg,
+  .btn-stop svg,
+  .btn-resume svg,
+  .btn-skip svg,
+  .btn-reset-small svg {
+    width: 12px;
+    height: 12px;
+  }
 }
 
 .btn-resume:hover {
